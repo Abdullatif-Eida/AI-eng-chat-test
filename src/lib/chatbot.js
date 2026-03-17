@@ -21,6 +21,7 @@ import { createOpenAIComposer } from "./openai.js";
 function localizeOrderStatus(status = "", locale = "en") {
   const statusMap = {
     "Out for delivery": { en: "Out for delivery", ar: "خرج للتسليم" },
+    Shipped: { en: "Shipped", ar: "تم الشحن" },
     Delivered: { en: "Delivered", ar: "تم التسليم" },
     Processing: { en: "Processing", ar: "قيد المعالجة" },
     "Pending payment": { en: "Pending payment", ar: "بانتظار الدفع" }
@@ -48,22 +49,30 @@ function localizeCourier(courier = "", locale = "en") {
 }
 
 function localizeEta(eta = "", locale = "en") {
+  if (locale !== "ar") {
+    return eta;
+  }
+
   const etaMap = {
-    "Today before 8:00 PM": {
-      en: "Today before 8:00 PM",
-      ar: "اليوم قبل الساعة 8:00 مساءً"
-    },
-    "Delivered on 2026-03-14": {
-      en: "Delivered on 2026-03-14",
-      ar: "تم التسليم في 2026-03-14"
-    },
-    "Expected to ship tomorrow": {
-      en: "Expected to ship tomorrow",
-      ar: "متوقع الشحن غداً"
-    }
+    "Today before 8:00 PM": "اليوم قبل الساعة 8:00 مساءً",
+    "Expected to ship tomorrow": "متوقع الشحن غداً"
   };
 
-  return etaMap[eta]?.[locale] ?? eta;
+  if (etaMap[eta]) {
+    return etaMap[eta];
+  }
+
+  const deliveredMatch = eta.match(/^Delivered on (\d{4}-\d{2}-\d{2})$/);
+  if (deliveredMatch) {
+    return `تم التسليم في ${deliveredMatch[1]}`;
+  }
+
+  const expectedDaysMatch = eta.match(/^Expected in (\d+) days?$/);
+  if (expectedDaysMatch) {
+    return `متوقع خلال ${expectedDaysMatch[1]} يوم`;
+  }
+
+  return eta;
 }
 
 function buildProductReply(product, locale) {

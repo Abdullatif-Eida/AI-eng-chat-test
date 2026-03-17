@@ -202,6 +202,32 @@ test("tracks an order fully in Arabic without mixed English fields", async () =>
   assert.doesNotMatch(result.reply, /Delivered|Paid|Pending assignment/);
 });
 
+test("keeps Arabic order tracking fully localized for shipped demo orders", async () => {
+  const bot = createChatbot();
+  const result = await bot.chat({
+    sessionId: "session-order-ar-shipped",
+    message: "أين طلبي KS-10577؟",
+    preferredLocale: "ar",
+    knownOrders: [
+      {
+        orderNumber: "KS-10577",
+        status: "Shipped",
+        eta: "Expected in 2 days",
+        paymentStatus: "Paid",
+        courier: "SMSA",
+        items: [{ productId: "sku006-gaming-headset", quantity: 1 }]
+      }
+    ]
+  });
+
+  assert.equal(result.intent, "order_tracking");
+  assert.equal(result.locale, "ar");
+  assert.match(result.reply, /تم الشحن/);
+  assert.match(result.reply, /متوقع خلال 2 يوم/);
+  assert.match(result.reply, /مدفوع/);
+  assert.doesNotMatch(result.reply, /Shipped|Expected in 2 days|Paid/);
+});
+
 test("asks for order number on a returns request and completes on follow-up", async () => {
   const bot = createChatbot();
   const stepOne = await bot.chat({
