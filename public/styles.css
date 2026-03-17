@@ -2278,6 +2278,26 @@ html[dir="rtl"] .cart-list {
   box-shadow: var(--shadow);
   max-height: calc(100vh - 48px);
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.toast-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+  width: min(420px, calc(100vw - 24px));
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(13, 53, 81, 0.96);
+  box-shadow: 0 18px 42px rgba(12, 35, 61, 0.24);
+  color: white;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-align: center;
+  z-index: 70;
+  pointer-events: none;
 }
 
 .modal-header {
@@ -2556,7 +2576,7 @@ html[dir="rtl"] .message-bubble.user {
     inset-inline-end: 8px;
     left: 8px;
     top: max(74px, env(safe-area-inset-top, 0px) + 8px);
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
     width: auto;
     height: auto;
     max-height: none;
@@ -2604,6 +2624,24 @@ html[dir="rtl"] .message-bubble.user {
     width: 100%;
     justify-content: center;
   }
+
+  .prompt-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .prompt-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .prompt-chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2611,21 +2649,21 @@ html[dir="rtl"] .message-bubble.user {
     inset-inline-end: 4px;
     left: 4px;
     top: max(68px, env(safe-area-inset-top, 0px) + 4px);
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 82px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 112px);
     border-radius: 22px;
   }
 
   .widget-chat {
-    padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .widget-chat-scroll {
-    padding-bottom: 14px;
+    padding-bottom: 18px;
   }
 
   .widget-composer {
     padding-top: 8px;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
     background: white;
   }
 
@@ -2699,5 +2737,19 @@ html[dir="rtl"] .message-bubble.user {
   .product-detail-stage,
   .product-detail-copy {
     min-width: 0;
+  }
+
+  .message-bubble {
+    max-width: 86%;
+  }
+
+  .message-bubble p {
+    font-size: 0.98rem;
+  }
+
+  .toast-notice {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 104px);
+    width: calc(100vw - 20px);
+    font-size: 0.88rem;
   }
 }

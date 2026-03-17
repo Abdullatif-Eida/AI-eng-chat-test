@@ -22811,6 +22811,7 @@ function App() {
   const [checkoutNotice, setCheckoutNotice] = (0, import_react.useState)(null);
   const [checkoutLoading, setCheckoutLoading] = (0, import_react.useState)(false);
   const [checkoutError, setCheckoutError] = (0, import_react.useState)("");
+  const [toastNotice, setToastNotice] = (0, import_react.useState)(null);
   const [queuedPrompt, setQueuedPrompt] = (0, import_react.useState)("");
   const [customerProfile, setCustomerProfile] = (0, import_react.useState)(() => {
     const saved = readStorage(STORAGE_KEYS.profile, {});
@@ -22904,7 +22905,39 @@ function App() {
   (0, import_react.useEffect)(() => {
     setHeroIndex(0);
   }, [siteLocale]);
+  (0, import_react.useEffect)(() => {
+    if (!toastNotice) {
+      return void 0;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setToastNotice(null);
+    }, 2800);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastNotice]);
+  (0, import_react.useEffect)(() => {
+    const shouldLockScroll = cartOpen || selectedProductId !== null || showAnalytics || widgetOpen && window.matchMedia("(max-width: 920px)").matches;
+    if (!shouldLockScroll) {
+      return void 0;
+    }
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [cartOpen, selectedProductId, showAnalytics, widgetOpen]);
   const currentSlide = content.heroSlides[heroIndex];
+  function showToast(message) {
+    setToastNotice({
+      id: crypto.randomUUID(),
+      message
+    });
+  }
   async function sendMessage(nextMessage) {
     if (!nextMessage.trim()) {
       return;
@@ -22980,7 +23013,8 @@ function App() {
       behavior: "smooth"
     });
   }
-  function addToCart(productId) {
+  function addToCart(productId, options = {}) {
+    const { closeDetails = false, openCart = false } = options;
     const product = catalog.find((item) => item.id === productId);
     if (!product) {
       return;
@@ -22994,7 +23028,19 @@ function App() {
       }
       return [...current, { productId, quantity: 1 }];
     });
-    setCartOpen(true);
+    if (closeDetails) {
+      setSelectedProductId(null);
+    }
+    if (openCart) {
+      setCartOpen(true);
+    }
+    showToast(
+      localizeText(
+        siteLocale,
+        `${product.displayName} added to cart.`,
+        `\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 ${product.displayName} \u0625\u0644\u0649 \u0627\u0644\u0633\u0644\u0629.`
+      )
+    );
   }
   function updateCartQuantity(productId, change) {
     setCartItems(
@@ -23030,15 +23076,14 @@ function App() {
       setCartItems([]);
       setCartOpen(false);
       setCheckoutNotice(data.order.orderNumber);
+      showToast(
+        localizeText(
+          siteLocale,
+          `Demo order ${data.order.orderNumber} created successfully.`,
+          `\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A ${data.order.orderNumber} \u0628\u0646\u062C\u0627\u062D.`
+        )
+      );
       navigateTo(`/orders/${data.order.orderNumber}`);
-      const trackingPrompt = siteLocale === "ar" ? `\u0623\u064A\u0646 \u0637\u0644\u0628\u064A ${data.order.orderNumber}\u061F` : `Where is my order ${data.order.orderNumber}?`;
-      if (customerProfile.submitted) {
-        setWidgetOpen(true);
-        setWidgetView("chat");
-        await sendMessage(trackingPrompt);
-      } else {
-        openChatWith(trackingPrompt);
-      }
     } catch (error) {
       setCheckoutError(content.sections.orderCreateFailed);
     } finally {
@@ -23239,8 +23284,11 @@ function App() {
       {
         content,
         locale: siteLocale,
-        onAddToCart: () => addToCart(selectedProduct.id),
-        onAsk: () => openChatWith(buildProductPrompt(selectedProduct, siteLocale)),
+        onAddToCart: () => addToCart(selectedProduct.id, { closeDetails: true }),
+        onAsk: () => {
+          setSelectedProductId(null);
+          openChatWith(buildProductPrompt(selectedProduct, siteLocale));
+        },
         onClose: () => setSelectedProductId(null),
         product: selectedProduct
       }
@@ -23267,6 +23315,7 @@ function App() {
         inputRef
       }
     ),
+    toastNotice ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToastNotice, { message: toastNotice.message }, toastNotice.id) : null,
     showAnalytics ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "modal-shell", role: "dialog", "aria-modal": "true", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "modal-card", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "modal-header", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { children: content.sections.analyticsTitle }),
@@ -23576,13 +23625,13 @@ function FooterSection({ content }) {
   ] });
 }
 function SupportTeaser({ label, open, onOpen }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `support-teaser ${open ? "support-teaser-open" : ""}`, children: [
-    !open ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "support-pill", type: "button", onClick: onOpen, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `support-teaser ${open ? "support-teaser-open" : ""}`, children: !open ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "support-pill", type: "button", onClick: onOpen, children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u{1F44B}" }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: label })
-    ] }) : null,
+    ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "support-bubble", type: "button", onClick: onOpen, "aria-label": "chat with us", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChatIcon, {}) })
-  ] });
+  ] }) : null });
 }
 function CartDrawer({
   cartItems,
@@ -23837,6 +23886,8 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
+  const hasUserMessages = messages.some((message) => message.role === "user");
+  const showQuickActions = !hasUserMessages;
   const [showMenu, setShowMenu] = (0, import_react.useState)(false);
   const [showEmojiPicker, setShowEmojiPicker] = (0, import_react.useState)(false);
   const [compactMode, setCompactMode] = (0, import_react.useState)(false);
@@ -24008,7 +24059,7 @@ function SupportWidget({
           ] })
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat-scroll", ref: messageListRef, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }),
+            showQuickActions ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }) : null,
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
               messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-bubble ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }) }, message.id)),
               loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-bubble bot", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.typing }) }) : null
@@ -24065,6 +24116,9 @@ function SupportWidget({
       ]
     }
   );
+}
+function ToastNotice({ message }) {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "toast-notice", role: "status", "aria-live": "polite", children: message });
 }
 function IconButton({ children, label, onClick }) {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "header-icon-button", "aria-label": label, onClick, children });

@@ -659,6 +659,7 @@ function App() {
   const [checkoutNotice, setCheckoutNotice] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [toastNotice, setToastNotice] = useState(null);
   const [queuedPrompt, setQueuedPrompt] = useState("");
   const [customerProfile, setCustomerProfile] = useState(() => {
     const saved = readStorage(STORAGE_KEYS.profile, {});
@@ -775,7 +776,52 @@ function App() {
     setHeroIndex(0);
   }, [siteLocale]);
 
+  useEffect(() => {
+    if (!toastNotice) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastNotice(null);
+    }, 2800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toastNotice]);
+
+  useEffect(() => {
+    const shouldLockScroll =
+      cartOpen ||
+      selectedProductId !== null ||
+      showAnalytics ||
+      (widgetOpen && window.matchMedia("(max-width: 920px)").matches);
+
+    if (!shouldLockScroll) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyTouchAction = document.body.style.touchAction;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.touchAction = previousBodyTouchAction;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [cartOpen, selectedProductId, showAnalytics, widgetOpen]);
+
   const currentSlide = content.heroSlides[heroIndex];
+
+  function showToast(message) {
+    setToastNotice({
+      id: crypto.randomUUID(),
+      message
+    });
+  }
 
   async function sendMessage(nextMessage) {
     if (!nextMessage.trim()) {
@@ -864,7 +910,8 @@ function App() {
     });
   }
 
-  function addToCart(productId) {
+  function addToCart(productId, options = {}) {
+    const { closeDetails = false, openCart = false } = options;
     const product = catalog.find((item) => item.id === productId);
     if (!product) {
       return;
@@ -880,7 +927,19 @@ function App() {
 
       return [...current, { productId, quantity: 1 }];
     });
-    setCartOpen(true);
+    if (closeDetails) {
+      setSelectedProductId(null);
+    }
+    if (openCart) {
+      setCartOpen(true);
+    }
+    showToast(
+      localizeText(
+        siteLocale,
+        `${product.displayName} added to cart.`,
+        `تمت إضافة ${product.displayName} إلى السلة.`
+      )
+    );
   }
 
   function updateCartQuantity(productId, change) {
@@ -926,20 +985,14 @@ function App() {
       setCartItems([]);
       setCartOpen(false);
       setCheckoutNotice(data.order.orderNumber);
+      showToast(
+        localizeText(
+          siteLocale,
+          `Demo order ${data.order.orderNumber} created successfully.`,
+          `تم إنشاء الطلب التجريبي ${data.order.orderNumber} بنجاح.`
+        )
+      );
       navigateTo(`/orders/${data.order.orderNumber}`);
-
-      const trackingPrompt =
-        siteLocale === "ar"
-          ? `أين طلبي ${data.order.orderNumber}؟`
-          : `Where is my order ${data.order.orderNumber}?`;
-
-      if (customerProfile.submitted) {
-        setWidgetOpen(true);
-        setWidgetView("chat");
-        await sendMessage(trackingPrompt);
-      } else {
-        openChatWith(trackingPrompt);
-      }
     } catch (error) {
       setCheckoutError(content.sections.orderCreateFailed);
     } finally {
@@ -1203,8 +1256,11 @@ function App() {
         <ProductDetailsModal
           content={content}
           locale={siteLocale}
-          onAddToCart={() => addToCart(selectedProduct.id)}
-          onAsk={() => openChatWith(buildProductPrompt(selectedProduct, siteLocale))}
+          onAddToCart={() => addToCart(selectedProduct.id, { closeDetails: true })}
+          onAsk={() => {
+            setSelectedProductId(null);
+            openChatWith(buildProductPrompt(selectedProduct, siteLocale));
+          }}
           onClose={() => setSelectedProductId(null)}
           product={selectedProduct}
         />
@@ -1229,6 +1285,8 @@ function App() {
         view={widgetView}
         inputRef={inputRef}
       />
+
+      {toastNotice ? <ToastNotice key={toastNotice.id} message={toastNotice.message} /> : null}
 
       {showAnalytics ? (
         <div className="modal-shell" role="dialog" aria-modal="true">
@@ -1663,14 +1721,16 @@ function SupportTeaser({ label, open, onOpen }) {
   return (
     <div className={`support-teaser ${open ? "support-teaser-open" : ""}`}>
       {!open ? (
-        <button className="support-pill" type="button" onClick={onOpen}>
-          <span>👋</span>
-          <span>{label}</span>
-        </button>
+        <>
+          <button className="support-pill" type="button" onClick={onOpen}>
+            <span>👋</span>
+            <span>{label}</span>
+          </button>
+          <button className="support-bubble" type="button" onClick={onOpen} aria-label="chat with us">
+            <ChatIcon />
+          </button>
+        </>
       ) : null}
-      <button className="support-bubble" type="button" onClick={onOpen} aria-label="chat with us">
-        <ChatIcon />
-      </button>
     </div>
   );
 }
@@ -1960,6 +2020,8 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
+  const hasUserMessages = messages.some((message) => message.role === "user");
+  const showQuickActions = !hasUserMessages;
   const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
@@ -2147,13 +2209,15 @@ function SupportWidget({
       ) : (
         <div className="widget-chat">
           <div className="widget-chat-scroll" ref={messageListRef}>
-            <div className="prompt-row">
-              {(text.quickActions ?? prompts).slice(0, 5).map((prompt) => (
-                <button key={prompt} className="prompt-chip" type="button" onClick={() => onSend(prompt)}>
-                  {prompt}
-                </button>
-              ))}
-            </div>
+            {showQuickActions ? (
+              <div className="prompt-row">
+                {(text.quickActions ?? prompts).slice(0, 5).map((prompt) => (
+                  <button key={prompt} className="prompt-chip" type="button" onClick={() => onSend(prompt)}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <div className="message-list">
               {messages.map((message) => (
@@ -2212,6 +2276,14 @@ function SupportWidget({
         </div>
       )}
     </aside>
+  );
+}
+
+function ToastNotice({ message }) {
+  return (
+    <div className="toast-notice" role="status" aria-live="polite">
+      {message}
+    </div>
   );
 }
 
