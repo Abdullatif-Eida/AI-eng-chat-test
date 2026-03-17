@@ -17,16 +17,6 @@ npm start
 
 Then open `http://localhost:3000`.
 
-### Optional OpenAI mode
-
-If `OPENAI_API_KEY` is present, the chatbot will use OpenAI's Responses API to compose grounded customer-facing replies from the structured commerce facts. If the key is missing, or if the API call fails, the app automatically falls back to the deterministic built-in responses.
-
-Example:
-
-```bash
-OPENAI_API_KEY=your_key_here OPENAI_MODEL=gpt-5 npm start
-```
-
 ## Run tests
 
 ```bash
