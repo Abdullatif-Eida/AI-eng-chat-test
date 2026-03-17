@@ -655,7 +655,7 @@ function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [orderList, setOrderList] = useState(() => readStorage(STORAGE_KEYS.orders, []));
-  const [ordersLoaded, setOrdersLoaded] = useState(false);
+  const [ordersLoaded, setOrdersLoaded] = useState(true);
   const [checkoutNotice, setCheckoutNotice] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -706,20 +706,6 @@ function App() {
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    async function loadOrders() {
-      try {
-        const response = await fetch("/api/orders");
-        const data = await response.json();
-        setOrderList((current) => mergeOrdersByNumber(current, data.orders ?? []));
-      } finally {
-        setOrdersLoaded(true);
-      }
-    }
-
-    loadOrders();
   }, []);
 
   useEffect(() => {
@@ -936,7 +922,7 @@ function App() {
         throw new Error(data.error || "Failed to create demo order");
       }
 
-      setOrderList((current) => mergeOrdersByNumber(data.orders ?? [], current));
+      setOrderList((current) => mergeOrdersByNumber([data.order], current));
       setCartItems([]);
       setCartOpen(false);
       setCheckoutNotice(data.order.orderNumber);
@@ -1463,12 +1449,12 @@ function AccountPage({
 
         {!hasProfile && orders.length > 0 ? (
           <div className="account-inline-note">
-            <strong>{localizeText(locale, "Local demo orders are ready", "الطلبات التجريبية المحلية جاهزة")}</strong>
+            <strong>{localizeText(locale, "Local demo orders saved", "تم حفظ الطلبات التجريبية المحلية")}</strong>
             <p>
               {localizeText(
                 locale,
-                "These orders are already saved on this device. Add your support details anytime to link future orders to your shopper profile too.",
-                "هذه الطلبات محفوظة بالفعل على هذا الجهاز. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
+                "These demo orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
+                "تم إنشاء هذه الطلبات التجريبية على هذا الجهاز. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
               )}
             </p>
           </div>

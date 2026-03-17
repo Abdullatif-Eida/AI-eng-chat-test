@@ -5,8 +5,8 @@ export const storePolicies = {
     domain: "leanmarket.com",
     paymentsProvider: "Amazon Payment Services",
     governingLaw: {
-      en: "United Arab Emirates",
-      ar: "دولة الإمارات العربية المتحدة"
+      en: "Kingdom of Saudi Arabia",
+      ar: "المملكة العربية السعودية"
     }
   },
   terms: {
@@ -24,7 +24,7 @@ export const storePolicies = {
         "Delivery times are estimated, not guaranteed, and risk of loss passes to the customer upon delivery.",
         "Website content such as logos, text, and images belongs to Lean Market.",
         "Products are provided as-is, and the site limits liability for indirect or consequential damages.",
-        "The terms are governed by the laws of the United Arab Emirates and may be updated at any time."
+        "The terms are governed by the laws of the Kingdom of Saudi Arabia and may be updated at any time."
       ],
       ar: [
         "يجب أن يكون العميل بعمر 18 سنة على الأقل أو لديه موافقة قانونية لاستخدام الموقع.",
@@ -34,7 +34,7 @@ export const storePolicies = {
         "أوقات التوصيل تقديرية وليست مضمونة، وتنتقل مسؤولية فقدان الشحنة إلى العميل عند التسليم.",
         "محتوى الموقع مثل الشعارات والنصوص والصور مملوك لـ Lean Market.",
         "المنتجات تُباع كما هي، مع تحديد مسؤولية المتجر عن الأضرار غير المباشرة أو التبعية.",
-        "تخضع الشروط لقوانين دولة الإمارات العربية المتحدة، وقد يتم تحديثها في أي وقت."
+        "تخضع الشروط لقوانين المملكة العربية السعودية، وقد يتم تحديثها في أي وقت."
       ]
     }
   },

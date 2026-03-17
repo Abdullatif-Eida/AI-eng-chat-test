@@ -76,8 +76,8 @@ const server = http.createServer(async (request, response) => {
         locale,
         samplePrompts: [
           "Tell me about the Wireless Mouse",
-          "Where is my order KS-10421?",
-          "I want a refund for KS-10388",
+          "Show me products",
+          "How do returns work?",
           "Recommend the best product for travel",
           "What payment methods do you support?",
           "What data do you collect?",
@@ -86,8 +86,8 @@ const server = http.createServer(async (request, response) => {
         ],
         samplePromptsAr: [
           "أريد معرفة تفاصيل ماوس لاسلكي",
-          "أين طلبي KS-10421؟",
-          "أريد استرداد الطلب KS-10388",
+          "اعرض المنتجات",
+          "كيف تعمل سياسة الاسترجاع؟",
           "رشح لي أفضل منتج للسفر",
           "ما طرق الدفع المتاحة؟",
           "ما البيانات التي تجمعونها؟",
@@ -123,7 +123,7 @@ const server = http.createServer(async (request, response) => {
         message: parsed.message ?? "",
         preferredLocale: parsed.preferredLocale === "ar" ? "ar" : "en",
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : []
+        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined
       });
 
       sendJson(response, 200, {

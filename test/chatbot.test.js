@@ -123,6 +123,25 @@ test("tracks an order with a provided order number", async () => {
   assert.match(result.reply, /Out for delivery/);
 });
 
+test("does not resolve hidden seeded orders when the client has no known orders", async () => {
+  const bot = createChatbot();
+  const stepOne = await bot.chat({
+    sessionId: "session-no-known-orders",
+    message: "Where is my order",
+    knownOrders: []
+  });
+  const stepTwo = await bot.chat({
+    sessionId: "session-no-known-orders",
+    message: "KS-10421",
+    knownOrders: []
+  });
+
+  assert.equal(stepOne.intent, "order_tracking");
+  assert.match(stepOne.reply, /share your order number/i);
+  assert.match(stepTwo.reply, /couldn't find KS-10421|double-check the order number/i);
+  assert.doesNotMatch(stepTwo.reply, /Out for delivery|Aramex|Noise Cancelling Earbuds/i);
+});
+
 test("tracks a locally saved demo order shared by the client", async () => {
   const bot = createChatbot();
   const result = await bot.chat({
@@ -333,7 +352,7 @@ test("answers terms and governing law questions from the policy documents", asyn
 
   assert.equal(result.intent, "policy_info");
   assert.match(result.reply, /18 years old|legal consent/i);
-  assert.match(result.reply, /United Arab Emirates/i);
+  assert.match(result.reply, /Kingdom of Saudi Arabia/i);
 });
 
 test("answers general return-policy questions without requiring an order number", async () => {

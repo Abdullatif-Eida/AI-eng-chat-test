@@ -52,7 +52,7 @@ This is a reviewer-style checklist for the full package before submission.
 - [x] Code development environment category covered
 - [x] Code review category covered
 - [x] Manual/automated/unit testing category covered
-- [ ] Final wording matches actual tools used in this project
+- [x] Final wording matches actual tools used in this project
 
 ## 6. Hidden Expectations
 
@@ -64,7 +64,7 @@ This is a reviewer-style checklist for the full package before submission.
 
 ## 7. Final Submission Quality
 
-- [ ] README has no rough wording or inconsistencies
+- [x] README has no rough wording or inconsistencies
 - [ ] Demo is visually checked in the browser one last time
 - [ ] Docs, README, and video all tell the same story
 - [ ] Repo is clean and easy to navigate
@@ -72,9 +72,8 @@ This is a reviewer-style checklist for the full package before submission.
 
 ## Current assessment
 
-The package is strong and substantially complete. The remaining work is mostly presentation and packaging:
+The package is strong and substantially complete. The remaining work is now mostly presentation and packaging:
 
 1. Finalize document length for the 1-2 page requirement
-2. Align the AI-tooling document with the actual tools used
-3. Record the demo video
-4. Do a last browser-based visual pass
+2. Record the demo video
+3. Do a last browser-based visual pass

@@ -1,90 +1,69 @@
 # Solution Design
 
-## Design goal
+## Goal
 
-The goal of this POC is to prove that a focused AI-first support layer can reduce response time for routine inquiries, improve trust, and lower manual support load. I prioritized the smallest set of flows that can create measurable value quickly:
+This POC proves that a focused AI-first support layer can reduce response time for routine e-commerce inquiries without trying to replace the support team. I prioritized the smallest MVP that directly addresses the brief:
 
-- product information
-- order tracking
-- returns and refunds
-- human handoff
+- `product information` to support conversion and reduce cart abandonment
+- `order tracking` to deflect repetitive tickets
+- `returns/refunds` to protect trust after purchase
+- `human handoff` to safely handle unclear or sensitive cases
 
 ## Architecture
 
-The MVP is implemented as a React storefront with an embedded support widget. A customer can browse products, add items to cart, create a demo order, and ask the assistant for help from the same interface. The support layer detects intent, retrieves trusted business data from shared product, order, and policy sources, and either resolves the request or escalates it to a human agent. This keeps the prototype easy to review while remaining production-friendly in shape.
+The prototype is a React storefront with an embedded support widget. The chatbot sits on top of grounded business services rather than answering from free-form generation alone. This keeps product, order, and policy answers trustworthy and makes the shape easy to integrate later with real commerce and CRM systems.
 
 ```mermaid
 flowchart LR
-    A["Customer storefront\nReact website + embedded widget"] --> B["Support orchestrator"]
-    B --> C["Intent and policy layer"]
-    C --> D["Shared product catalog"]
-    C --> E["Shared order service"]
-    C --> F["Terms, privacy, and returns policy service"]
-    C --> G["Human handoff and CRM ticketing"]
-    C --> H["Analytics and observability"]
+    A["Customer web chat"] --> B["Intent + orchestration layer"]
+    B --> C["Product catalog service"]
+    B --> D["Order lookup service"]
+    B --> E["Returns / policy service"]
+    B --> F["Human handoff / CRM"]
+    B --> G["Analytics"]
 ```
 
-## Core flow
+## Core user flow
 
-The assistant first classifies the request, then follows a grounded path for each supported intent. If key information is missing, it asks a clarifying question. If confidence is low or the case is sensitive, it hands off to a human. Product, order, and policy answers are grounded in shared bilingual data used by both the storefront and the chatbot. The returns/refunds, privacy, and terms flows are grounded in the supplied portfolio-company policy documents. See the Appendix for the full core flow diagram.
+The assistant first detects intent, then follows a grounded path. If key information is missing, it asks a clarifying question. If confidence is low, the issue is sensitive, or the order cannot be resolved safely, it escalates to a human agent.
 
 ```mermaid
 flowchart TD
-    A["Customer sends message"] --> B["Detect intent"]
-    B --> C{"Intent type"}
-    C -->|"Product information"| D["Search product catalog"]
-    C -->|"Order tracking"| E{"Order number provided"}
-    C -->|"Returns and refunds"| F{"Order number provided"}
-    C -->|"Unclear or sensitive"| G["Escalate to human agent"]
-
-    D --> H["Return grounded product details"]
-    E -->|"No"| I["Ask for order number"]
-    I --> J["Lookup order"]
-    E -->|"Yes"| J
-    J --> K{"Order found"}
-    K -->|"Yes"| L["Return status and ETA"]
-    K -->|"No"| G
-
-    F -->|"No"| M["Ask for order number"]
-    M --> N["Check return eligibility and policy"]
-    F -->|"Yes"| N
-    N --> O{"Clear and eligible"}
-    O -->|"Yes"| P["Explain next refund step"]
-    O -->|"No"| G
+    A["Customer message"] --> B["Detect intent"]
+    B --> C{"Intent"}
+    C -->|"Product info"| D["Search catalog and reply"]
+    C -->|"Order tracking"| E{"Order number?"}
+    C -->|"Returns / refund"| F{"Order number?"}
+    C -->|"Low confidence / sensitive"| G["Escalate to human"]
+    E -->|"No"| H["Ask for order number"]
+    E -->|"Yes"| I["Lookup order and return status"]
+    F -->|"No"| J["Ask for order number"]
+    F -->|"Yes"| K["Check eligibility and explain next step"]
 ```
 
-## Key choices and prioritization
+## Key design choices
 
-- `Product information` was prioritized because it supports pre-purchase conversion and can reduce cart abandonment.
-- `Order tracking` was prioritized because it is one of the highest-volume repetitive support use cases.
-- `Returns/refunds` was prioritized because it affects post-purchase trust and satisfaction.
-- `Human handoff` was included in the MVP because customer support systems should not guess on sensitive or exception-heavy cases.
-- `Shared storefront + support data` was chosen so product details, orders, and policy answers stay consistent across the UI and the chatbot.
+- `Grounded answers first`: product, order, and refund answers come from structured data, not unsupported generation.
+- `Human handoff in MVP`: support systems should not guess on exceptions, complaints, or low-confidence cases.
+- `Bilingual-ready`: Arabic and English support matters for KSA operations.
+- `Analytics included`: the business needs to measure containment, handoff rate, and response-time improvement.
 
 ## Technology stack
 
-- runtime: Node.js
-- server layer: native HTTP server
-- UI: ReactJS storefront with an embedded support widget
-- data layer: shared bilingual product catalog, dynamic demo orders, and policy-grounded terms/privacy/returns data
-- testing: Node built-in test runner
-- optional AI layer: OpenAI Responses API for grounded reply composition when credentials are present
+- frontend: `React`
+- backend: `Node.js` native HTTP server
+- data layer: shared mock catalog, order, and policy services
+- testing: `Node` built-in test runner
+- optional AI layer: `OpenAI Responses API` for grounded reply composition when credentials are available
 
-## Integration potential
+## Integration potential and scale path
 
-The design can connect cleanly to common commerce and support systems:
+The mock services are designed as replaceable adapters:
 
-- product catalog: Shopify, Medusa, or a custom commerce backend
-- order service: OMS, ERP, or courier tracking providers
-- policy and legal content: CMS, help center, or policy service with versioned policy documents
-- handoff/CRM: Zendesk, Freshdesk, Intercom, HubSpot, or internal tooling
-- analytics: BI or product analytics systems for response time, resolution rate, and support deflection
+- catalog: `Shopify`, `Medusa`, or custom commerce backend
+- orders: `OMS`, `ERP`, or courier tracking provider
+- handoff: `Zendesk`, `Freshdesk`, `Intercom`, or `HubSpot`
+- policy content: CMS or help-center source
+- analytics: BI or product analytics tools
 
-## Guardrails and scalability
-
-- factual answers are grounded in structured business data
-- missing information triggers clarifying questions
-- low-confidence or sensitive cases escalate to human support
-- the architecture is bilingual-ready and can expand to new channels and new policy sources later
-
-Suggested supporting visuals outside the main 1-2 pages: `Diagram 5: Design choices and prioritization` and `Diagram 6: Delivery roadmap` from [mermaid-diagrams.md](/Users/abdullatifeida/abdullatif_eida/new/docs/mermaid-diagrams.md)
+This keeps the POC narrow but scalable: it solves the highest-value support journeys now while leaving a clean path to production integrations, WhatsApp expansion, and richer support automation later.

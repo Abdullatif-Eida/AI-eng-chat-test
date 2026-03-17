@@ -43,6 +43,7 @@ npm test
 - Arabic-aware locale detection with bilingual sample journeys
 - Optional OpenAI-powered response composition with deterministic fallback
 - Case-study docs for problem framing, solution design, tooling decisions, and demo script
+- KSA-aligned policy grounding for returns, privacy, and terms responses
 
 ## Assumptions
 
@@ -55,8 +56,8 @@ npm test
 ## Suggested demo prompts
 
 - `Tell me about the Wireless Mouse`
-- `Where is my order KS-10421?`
-- `I need a refund for KS-10388`
+- `Show me products`
+- `How do returns work?`
+- `Create a demo order, then ask where it is`
 - `I want to speak to a human agent`
-- `أين طلبي KS-10421؟`
-# AI-eng-chat-test
+- `اعرض المنتجات`

@@ -141,18 +141,18 @@ function normalizeOrderNumber(orderNumber = "") {
   return String(orderNumber).trim().toUpperCase();
 }
 
-function lookupOrder(orderNumber, knownOrders = []) {
+function lookupOrder(orderNumber, knownOrders) {
   const normalized = normalizeOrderNumber(orderNumber);
 
   if (!normalized) {
     return null;
   }
 
-  return (
-    findOrder(normalized) ??
-    knownOrders.find((order) => normalizeOrderNumber(order?.orderNumber) === normalized) ??
-    null
-  );
+  if (Array.isArray(knownOrders)) {
+    return knownOrders.find((order) => normalizeOrderNumber(order?.orderNumber) === normalized) ?? null;
+  }
+
+  return findOrder(normalized);
 }
 
 function isOrderNumberFollowup(message = "") {
@@ -315,7 +315,7 @@ async function resolveOrderRequiredIntent({
     message,
     preferredLocale,
     customerProfile,
-    knownOrders = []
+    knownOrders
   }) {
     const trimmedMessage = message.trim();
     const session = getSession(sessionId);
