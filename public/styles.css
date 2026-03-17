@@ -2646,19 +2646,23 @@ html[dir="rtl"] .message-bubble.user {
 
 @media (max-width: 560px) {
   .support-widget {
-    inset-inline-end: 4px;
-    left: 4px;
+    inset-inline-end: 10px;
+    left: 10px;
     top: max(68px, env(safe-area-inset-top, 0px) + 4px);
     bottom: calc(env(safe-area-inset-bottom, 0px) + 112px);
     border-radius: 22px;
   }
 
   .widget-chat {
-    padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .widget-chat-scroll {
     padding-bottom: 18px;
+  }
+
+  .widget-header {
+    padding-inline: 14px;
   }
 
   .widget-composer {
