@@ -2067,7 +2067,7 @@ html[dir="rtl"] .cart-list {
   display: grid;
   align-content: start;
   gap: 8px;
-  padding-bottom: 18px;
+  padding-bottom: 28px;
 }
 
 .widget-chat-tools {
@@ -2130,7 +2130,7 @@ html[dir="rtl"] .cart-list {
 }
 
 .message-list {
-  padding: 4px 0 18px;
+  padding: 4px 0 28px;
   display: flex;
   flex-direction: column;
   gap: 10px;
