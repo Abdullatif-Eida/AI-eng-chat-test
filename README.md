@@ -9,6 +9,10 @@ Lean Assist is a small AI-first customer support chatbot prototype for the Lean 
 
 The implementation is intentionally dependency-light so reviewers can run it quickly.
 
+## Submission links
+
+- Live demo: [https://chat-bot-case.netlify.app](https://chat-bot-case.netlify.app)
+
 ## Quick start
 
 1. Install dependencies:
