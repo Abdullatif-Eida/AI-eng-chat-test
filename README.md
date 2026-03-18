@@ -9,19 +9,36 @@ Lean Assist is a small AI-first customer support chatbot prototype for the Lean 
 
 The implementation is intentionally dependency-light so reviewers can run it quickly.
 
-## Run locally
+## Quick start
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start the local demo server:
 
 ```bash
 npm start
 ```
 
-Then open `http://localhost:3000`.
+3. Open `http://localhost:3000`.
 
 ## Run tests
+
+After installing dependencies, run:
 
 ```bash
 npm test
 ```
+
+## Reviewer notes
+
+- This project is designed to be reviewed from source code directly, including a zip or shared folder.
+- `npm start` builds the frontend bundle and starts the local server on port `3000`.
+- No external services are required for the default deterministic demo flow.
+- Optional OpenAI behavior is supported in code, but the app still runs without any API key.
 
 ## What is included
 
