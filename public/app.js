@@ -23886,8 +23886,6 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
-  const hasUserMessages = messages.some((message) => message.role === "user");
-  const showQuickActions = !hasUserMessages;
   const [showMenu, setShowMenu] = (0, import_react.useState)(false);
   const [showEmojiPicker, setShowEmojiPicker] = (0, import_react.useState)(false);
   const [compactMode, setCompactMode] = (0, import_react.useState)(false);
@@ -24059,7 +24057,7 @@ function SupportWidget({
           ] })
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat-scroll", ref: messageListRef, children: [
-            showQuickActions ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
               messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-bubble ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }) }, message.id)),
               loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-bubble bot", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.typing }) }) : null

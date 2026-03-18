@@ -2020,8 +2020,6 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
-  const hasUserMessages = messages.some((message) => message.role === "user");
-  const showQuickActions = !hasUserMessages;
   const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
@@ -2209,15 +2207,13 @@ function SupportWidget({
       ) : (
         <div className="widget-chat">
           <div className="widget-chat-scroll" ref={messageListRef}>
-            {showQuickActions ? (
-              <div className="prompt-row">
-                {(text.quickActions ?? prompts).slice(0, 5).map((prompt) => (
-                  <button key={prompt} className="prompt-chip" type="button" onClick={() => onSend(prompt)}>
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            <div className="prompt-row">
+              {(text.quickActions ?? prompts).slice(0, 5).map((prompt) => (
+                <button key={prompt} className="prompt-chip" type="button" onClick={() => onSend(prompt)}>
+                  {prompt}
+                </button>
+              ))}
+            </div>
 
             <div className="message-list">
               {messages.map((message) => (
