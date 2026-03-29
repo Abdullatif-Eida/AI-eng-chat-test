@@ -1,3 +1,8 @@
+
+// this is the core file that controls how the chatbot behaves: 
+// it reads the user’s message, detects the intent, manages conversation state, chooses the right business logic, 
+// and returns the final response using if else switch and confidence scores.
+
 import { classifyIntent, extractOrderNumber } from "./intents.js";
 import {
   canCancelOrder,

@@ -1,3 +1,7 @@
+
+// simple file that lists the mocked external systems your chatbot is designed to use, 
+// so the app can show how it would connect to real services later.
+
 export const integrationMap = [
   {
     id: "catalog",
@@ -28,3 +32,8 @@ export const integrationMap = [
     purpose: "Routes sensitive or uncertain cases to a human support queue with summary context."
   }
 ];
+
+// “this chatbot gets product facts from a catalog system”
+// “this chatbot gets order status from an order system”
+// “this chatbot gets return rules from a returns system”
+// “this chatbot sends hard cases to a CRM/human support system”

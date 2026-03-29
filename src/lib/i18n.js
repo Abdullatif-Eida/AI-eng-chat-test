@@ -1,3 +1,7 @@
+
+// The localization file that stores the chatbot’s English and Arabic text and helps the app choose and format
+// replies in the correct language.
+
 const copy = {
   en: {
     welcome:

@@ -1,3 +1,8 @@
+
+// The intent-detection file that looks at the user’s message and decides what they are asking for,
+// like product info, order tracking, returns, or human support.
+
+
 const intentPatterns = {
   greeting: [
     "hello",

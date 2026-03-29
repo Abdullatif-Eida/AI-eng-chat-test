@@ -1,3 +1,7 @@
+
+// the business-logic file that gives the chatbot real store knowledge, like finding products, checking orders, applying return rules, 
+// answering policy questions, and deciding when to hand off to a human.
+
 import { products } from "../data/products.js";
 import { orders } from "../data/orders.js";
 import { storePolicies } from "../data/policies.js";

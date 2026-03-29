@@ -1,3 +1,7 @@
+
+// The optional AI layer that sends grounded facts to the OpenAI API to generate a nicer reply, while falling back to the normal 
+// deterministic response if no API key is set or the call fails.
+
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 
 function extractOutputText(payload) {

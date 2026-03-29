@@ -1,3 +1,7 @@
+
+// The local backend server that serves the website files and handles the API routes for chat, 
+// products, orders, analytics, and app bootstrap data.
+
 import http from "node:http";
 import path from "node:path";
 import fs from "node:fs/promises";
