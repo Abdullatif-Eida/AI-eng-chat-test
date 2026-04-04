@@ -636,6 +636,181 @@ function buildCatalogToolTrace({ action, output, sharingBoundary }) {
   ];
 }
 
+function buildOrderToolTrace({ tool, args, output, sharingBoundary }) {
+  return [
+    {
+      tool,
+      args: sanitizeToolArgsForExternalSharing(
+        tool,
+        tokenizeValue(args, sharingBoundary),
+        sharingBoundary
+      ),
+      output: sanitizeToolOutputForExternalSharing(
+        tool,
+        tokenizeValue(output, sharingBoundary),
+        sharingBoundary
+      )
+    }
+  ];
+}
+
+function buildSpecificOrderReply(order, locale = "en") {
+  if (locale === "ar") {
+    return `طلبك ${order.orderNumber} حالته ${order.status}. الموعد المتوقع: ${order.eta}. شركة الشحن: ${order.courier}.`;
+  }
+
+  return `Your order ${order.orderNumber} is currently ${order.status}. ETA: ${order.eta}. Courier: ${order.courier}.`;
+}
+
+function buildLatestVisibleOrderReply(order, locale = "en") {
+  if (locale === "ar") {
+    return `آخر طلب ظاهر لك هو ${order.orderNumber}. حالته ${order.status}. الموعد المتوقع: ${order.eta}. شركة الشحن: ${order.courier}.`;
+  }
+
+  return `Your latest visible order is ${order.orderNumber}. Status: ${order.status}. ETA: ${order.eta}. Courier: ${order.courier}.`;
+}
+
+function planDeterministicOrderAction(message = "") {
+  if (PROFILE_PATTERN.test(message) || RETURN_PATTERN.test(message) || CANCELLATION_PATTERN.test(message) || POLICY_PATTERN.test(message) || HUMAN_HANDOFF_PATTERN.test(message)) {
+    return null;
+  }
+
+  const orderNumber = extractOrderNumber(message);
+  if (orderNumber && ORDER_TRACKING_PATTERN.test(message)) {
+    return {
+      tool: "get_order_details",
+      args: {
+        orderNumber
+      }
+    };
+  }
+
+  if (LATEST_ORDER_PATTERN.test(message) || ORDER_TRACKING_PATTERN.test(message)) {
+    return {
+      tool: "list_customer_orders",
+      args: {}
+    };
+  }
+
+  return null;
+}
+
+function buildDeterministicOrderResponse({ action, output, locale = "en", sharingBoundary }) {
+  const toolTrace = buildOrderToolTrace({
+    tool: action.tool,
+    args: action.args,
+    output,
+    sharingBoundary
+  });
+
+  if (output?.ok === false) {
+    if (output.code === "identity_required") {
+      return {
+        reply: output.message,
+        intent: "order_tracking",
+        confidence: 0.7,
+        toolTrace,
+        structured: {
+          intent: "order_tracking",
+          resolution: "identity_required",
+          handoffRecommended: false,
+          customerAction:
+            locale === "ar"
+              ? "شارك البريد الإلكتروني أو رقم الجوال أو رقم العميل الموثق."
+              : "Share the verified email, phone number, or customer number on the order."
+        }
+      };
+    }
+
+    if (output.code === "order_number_required") {
+      return {
+        reply: output.message,
+        intent: "order_tracking",
+        confidence: 0.72,
+        toolTrace,
+        structured: {
+          intent: "order_tracking",
+          resolution: "order_number_required",
+          handoffRecommended: false,
+          customerAction:
+            locale === "ar"
+              ? "شارك رقم الطلب الذي تريد مراجعته."
+              : "Share the order number you want checked."
+        }
+      };
+    }
+
+    return {
+      reply: output.message,
+      intent: "order_tracking",
+      confidence: 0.3,
+      degraded: output.code === "tool_error",
+      toolTrace,
+      structured: {
+        intent: "order_tracking",
+        resolution: output.code === "tool_error" ? "temporary_failure" : "fallback",
+        handoffRecommended: output.code === "tool_error",
+        customerAction:
+          output.code === "tool_error"
+            ? locale === "ar"
+              ? "أعد المحاولة بعد قليل أو اطلب التحويل إلى موظف دعم."
+              : "Try again shortly or ask for a human agent."
+            : ""
+      }
+    };
+  }
+
+  if (action.tool === "get_order_details" && output.order) {
+    return {
+      reply: buildSpecificOrderReply(output.order, locale),
+      intent: "order_tracking",
+      confidence: 0.95,
+      toolTrace,
+      structured: {
+        intent: "order_tracking",
+        resolution: "answered",
+        handoffRecommended: false,
+        customerAction: ""
+      }
+    };
+  }
+
+  const latestOrder = output.orders?.[0] ?? null;
+  if (!latestOrder) {
+    return {
+      reply:
+        locale === "ar"
+          ? "لم أجد طلباً ظاهراً بعد. شارك رقم الطلب أو البريد الإلكتروني الموثق وسأتحقق مرة أخرى."
+          : "I couldn't find a visible order yet. Share your order number or verified email and I’ll check again.",
+      intent: "order_tracking",
+      confidence: 0.7,
+      toolTrace,
+      structured: {
+        intent: "order_tracking",
+        resolution: "clarification_needed",
+        handoffRecommended: false,
+        customerAction:
+          locale === "ar"
+            ? "شارك رقم الطلب أو البريد الإلكتروني الموثق."
+            : "Share your order number or verified email."
+      }
+    };
+  }
+
+  return {
+    reply: buildLatestVisibleOrderReply(latestOrder, locale),
+    intent: "order_tracking",
+    confidence: 0.91,
+    toolTrace,
+    structured: {
+      intent: "order_tracking",
+      resolution: "answered",
+      handoffRecommended: false,
+      customerAction: ""
+    }
+  };
+}
+
 function buildProductReply(match, locale = "en") {
   if (locale === "ar") {
     return [
@@ -879,9 +1054,20 @@ export function createSupportAgent({ track = () => {} } = {}) {
     });
     const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
     const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
+    const deterministicOrderAction = planDeterministicOrderAction(message);
     const shouldBypassProviderForCatalog =
       deterministicCatalogAction &&
       deterministicCatalogAction.mode !== "product_lookup";
+
+    if (deterministicOrderAction) {
+      const output = await toolbox.execute(deterministicOrderAction.tool, deterministicOrderAction.args);
+      return buildDeterministicOrderResponse({
+        action: deterministicOrderAction,
+        output,
+        locale,
+        sharingBoundary
+      });
+    }
 
     if (shouldBypassProviderForCatalog) {
       const output = await toolbox.execute("search_catalog", deterministicCatalogAction);

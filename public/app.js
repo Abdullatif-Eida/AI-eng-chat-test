@@ -22917,6 +22917,24 @@ function createChatMessage(role, text, options = {}) {
     retryAfterMs: Number(options.retryAfterMs) || 0
   };
 }
+function findRetryableTurn(messages = [], retryText = "") {
+  const trimmedRetryText = String(retryText ?? "").trim();
+  if (!trimmedRetryText) {
+    return null;
+  }
+  const lastMessage = messages[messages.length - 1];
+  const previousMessage = messages[messages.length - 2];
+  if (lastMessage?.role !== "bot" || !lastMessage.retryable || String(lastMessage.retryText ?? "").trim() !== trimmedRetryText) {
+    return null;
+  }
+  if (previousMessage?.role !== "user" || String(previousMessage.text ?? "").trim() !== trimmedRetryText) {
+    return null;
+  }
+  return {
+    failedReplyId: lastMessage.id,
+    userMessageId: previousMessage.id
+  };
+}
 function buildClientErrorReply(text, error, responseStatus = 0) {
   if (error?.name === "AbortError") {
     return text.timeoutError;
@@ -23139,10 +23157,14 @@ function App() {
     setLoading(true);
     setCooldownUntil(currentTime + MESSAGE_COOLDOWN_MS);
     setClockNow(currentTime);
-    if (repeatUserBubble) {
-      const userEntry = createChatMessage("user", trimmedMessage);
-      setMessages((current) => [...current, userEntry]);
-    }
+    setMessages((current) => {
+      const retryableTurn = findRetryableTurn(current, trimmedMessage);
+      const withoutFailedReply = retryableTurn ? current.filter((message) => message.id !== retryableTurn.failedReplyId) : current;
+      if (!repeatUserBubble || retryableTurn) {
+        return withoutFailedReply;
+      }
+      return [...withoutFailedReply, createChatMessage("user", trimmedMessage)];
+    });
     setDraft("");
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
@@ -23191,9 +23213,14 @@ function App() {
       if (typeof data.reply !== "string" || !data.reply.trim()) {
         throw new Error("Missing chat reply");
       }
+      const isTemporaryFailure = data.structured?.resolution === "temporary_failure";
       setMessages((current) => [
         ...current,
-        createChatMessage("bot", data.reply)
+        createChatMessage("bot", data.reply, {
+          kind: isTemporaryFailure ? "error" : "standard",
+          retryable: isTemporaryFailure,
+          retryText: isTemporaryFailure ? trimmedMessage : ""
+        })
       ]);
     } catch (error) {
       setMessages((current) => [

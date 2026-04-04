@@ -479,7 +479,7 @@ test("sends a low-cost DeepSeek request profile for simple turns", async () => {
   assert.doesNotMatch(firstBody.instructions, /Recent conversation|Current shopper context/i);
 });
 
-test("forces tool usage for sensitive order and profile turns", async () => {
+test("forces tool usage for sensitive profile turns and keeps deterministic order turns off the provider path", async () => {
   const bodies = [];
 
   await withMockedOpenRouter(async () => {
@@ -509,10 +509,7 @@ test("forces tool usage for sensitive order and profile turns", async () => {
   assert.equal(initialBodies[0].tool_choice?.type, "function");
   assert.equal(initialBodies[0].tool_choice?.name, "get_customer_profile");
   assert.equal(initialBodies[0].provider?.sort, undefined);
-  assert.equal(initialBodies[1].tool_choice?.type, "function");
-  assert.equal(initialBodies[1].tool_choice?.name, "get_order_details");
-  assert.equal(initialBodies[1].provider?.sort, undefined);
-  assert.equal(initialBodies[1].max_tool_calls, 6);
+  assert.equal(initialBodies.length, 1);
 });
 
 test("requires a tool call for ambiguous post-order turns instead of leaving them fully optional", async () => {
@@ -982,6 +979,59 @@ test("uses the newest visible order when the shopper asks for the latest order",
     assert.match(result.reply, /KS-10555/);
     assert.doesNotMatch(result.reply, /KS-10512/);
   });
+});
+
+test("answers generic where-is-my-order asks from trusted visible orders without OpenRouter", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for deterministic order tracking."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "generic-order-tracking-local",
+      message: "Where is my order",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10590",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku001-wireless-mouse", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(result.intent, "order_tracking");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(result.reply, /KS-10590/);
+    assert.match(result.reply, /Processing|Expected to ship tomorrow/);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
 });
 
 test("does not treat anonymous browser-provided orders as verified order access", async () => {
@@ -1795,7 +1845,7 @@ test("resets protected history and retention stores when the verified shopper id
 
     await bot.chat({
       sessionId: "identity-reset",
-      message: "Where is my order KS-10421?",
+      message: "I need a refund for order KS-10421",
       customerProfile: {
         email: "maha@example.com"
       }
@@ -1834,7 +1884,7 @@ test("keeps protected history when the same shopper adds phone or customer numbe
 
     await bot.chat({
       sessionId: "identity-enrichment",
-      message: "Where is my order KS-10421?",
+      message: "I need a refund for order KS-10421",
       customerProfile: {
         email: "maha@example.com"
       }
@@ -1941,14 +1991,13 @@ test("tokenizes sensitive order and email values before sharing context with Ope
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "protected-sharing",
-      message: "Where is my order KS-10421? My email is maha@example.com",
+      message: "I need a refund for order KS-10421. My email is maha@example.com",
       customerProfile: {
         email: "maha@example.com"
       }
     });
 
-    assert.match(result.reply, /KS-10421/);
-    assert.match(result.reply, /Aramex|ETA|Out for delivery/);
+    assert.equal(result.intent, "returns_refunds");
   }, customFetch);
 
   assert.ok(requests.length >= 1);
