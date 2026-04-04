@@ -210,7 +210,7 @@ export function createSeededCommerceProvider() {
         : null;
     },
 
-    getCatalogData({ query, mode, locale }) {
+    getCatalogData({ query, mode, locale, excludeProductIds = [] }) {
       if (mode === "catalog_overview") {
         return {
           mode,
@@ -232,7 +232,9 @@ export function createSeededCommerceProvider() {
       }
 
       if (mode === "recommendation") {
-        const matches = recommendProducts(query, locale)
+        const matches = recommendProducts(query, locale, {
+          excludeProductIds
+        })
           .slice(0, 4)
           .map((product) => buildProductSummary(product, locale));
 

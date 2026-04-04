@@ -264,6 +264,13 @@ export function createCommerceToolbox({
             type: "string",
             enum: ["product_lookup", "category_browse", "recommendation", "catalog_overview"],
             description: "Choose product lookup for a named item, category browse for category questions, recommendation for use-case guidance, or catalog overview for generic browsing."
+          },
+          excludeProductIds: {
+            type: "array",
+            description: "Optional product ids to exclude from repeated recommendations.",
+            items: {
+              type: "string"
+            }
           }
         },
         required: ["query", "mode"],
@@ -414,12 +421,15 @@ export function createCommerceToolbox({
       case "search_catalog":
         return runTool(name, rawArgs, async () => {
           const { query, mode } = rawArgs;
-          const cacheKey = `catalog:${mode}:${hashValue(query)}`;
+          const excludeProductIds = Array.isArray(rawArgs.excludeProductIds)
+            ? rawArgs.excludeProductIds.map((value) => String(value))
+            : [];
+          const cacheKey = `catalog:${mode}:${hashValue(query)}:${hashValue(excludeProductIds.join("|"))}`;
           const { value, cache: cacheStatus } = await withCache(cache, {
             scope: "public",
             key: cacheKey,
             ttlMs: 5 * 60 * 1000,
-            loader: () => commerceProvider.getCatalogData({ query, mode, locale })
+            loader: () => commerceProvider.getCatalogData({ query, mode, locale, excludeProductIds })
           });
 
           return {

@@ -48,7 +48,8 @@ const TOOL_ARG_SHARING_POLICY = {
   get_customer_profile: {},
   search_catalog: {
     query: true,
-    mode: true
+    mode: true,
+    excludeProductIds: [true]
   },
   get_policy_information: {
     topic: true,

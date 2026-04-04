@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { createChatbot } from "../src/lib/chatbot.js";
 import { createOrder } from "../src/data/orders.js";
 import {
+  createDataProtectionBoundary,
+  detokenizeText,
+  registerBoundaryToken
+} from "../src/lib/dataProtection.js";
+import {
   createSessionRetentionStore,
   readSessionRetentionValue,
   writeSessionRetentionValue
@@ -765,6 +770,26 @@ test("does not reuse a handoff across different shopper identities in the same s
   });
 });
 
+test("does not expose the handoff tool for vague non-handoff chatter", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "no-handoff-on-vague-chat",
+      message: "ssay walla"
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const initialBody = bodies.find((body) =>
+    !(body.input ?? []).some((item) => item?.type === "function_call_output")
+  );
+
+  assert.ok(initialBody);
+  assert.ok(Array.isArray(initialBody.tools));
+  assert.equal(initialBody.tools.some((tool) => tool.name === "create_handoff"), false);
+});
+
 test("answers privacy questions from policy data instead of guessing", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();
@@ -1059,6 +1084,156 @@ test("answers payment-method questions from trusted policy data without OpenRout
     assert.equal(result.structured?.resolution, "answered");
     assert.equal(fetchCalls, 0);
     assert.match(result.reply, /mada|Visa|Mastercard|Apple Pay|Cash on Delivery/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("lists items for latest-order follow-up questions without falling back to the catalog", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for deterministic order follow-ups."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "latest-order-items-local",
+      message: "what is the staus of my latest order",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    const itemsResult = await bot.chat({
+      sessionId: "latest-order-items-local",
+      message: "what products it has",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(itemsResult.intent, "order_tracking");
+    assert.equal(itemsResult.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(itemsResult.reply, /KS-10540/);
+    assert.match(itemsResult.reply, /Mechanical Keyboard/);
+    assert.doesNotMatch(itemsResult.reply, /Here are the main categories we currently carry/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("treats a bare order number as an order follow-up when recent order context exists", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for deterministic bare order follow-ups."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "bare-order-follow-up",
+      message: "Where is my latest order?",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    const followUp = await bot.chat({
+      sessionId: "bare-order-follow-up",
+      message: "KS-10540",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(followUp.intent, "order_tracking");
+    assert.equal(fetchCalls, 0);
+    assert.match(followUp.reply, /KS-10540/);
+    assert.doesNotMatch(followUp.reply, /ORDER_4/);
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;
@@ -1513,6 +1688,48 @@ test("answers travel recommendations from the local catalog even when OpenRouter
     assert.equal(result.structured?.resolution, "answered");
     assert.equal(fetchCalls, 0);
     assert.match(result.reply, /External SSD|Portable Power Bank|Bluetooth Speaker|USB-C Hub/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("offers grounded alternative recommendations instead of inventing products", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for deterministic recommendation follow-ups."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "recommendation-alternatives-local",
+      message: "Recommend the best product for travel"
+    });
+
+    const result = await bot.chat({
+      sessionId: "recommendation-alternatives-local",
+      message: "others plz"
+    });
+
+    assert.equal(result.intent, "recommendations");
+    assert.equal(fetchCalls, 0);
+    assert.doesNotMatch(result.reply, /Travel Backpack|Portable Charger|Travel Pillow/i);
+    assert.match(result.reply, /Mechanical Keyboard|Laptop Stand|Smart Home Camera|Wireless Mouse/i);
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;
@@ -2042,6 +2259,16 @@ test("tokenizes sensitive order and email values before sharing context with Ope
     assert.doesNotMatch(requestBody, /KS-10421/);
     assert.match(requestBody, /\[\[order_\d+\]\]/);
   }
+});
+
+test("detokenizes aliased order placeholders back to the original order number", () => {
+  const boundary = createDataProtectionBoundary();
+  registerBoundaryToken(boundary, "order", "KS-10540");
+
+  const restored = detokenizeText("I couldn't find order ORDER_1 in our system.", boundary);
+
+  assert.match(restored, /KS-10540/);
+  assert.doesNotMatch(restored, /ORDER_1/);
 });
 
 test("allowlists tool payloads before OpenRouter sees them", async () => {

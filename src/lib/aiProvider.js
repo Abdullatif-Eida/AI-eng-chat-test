@@ -30,6 +30,8 @@ const MAX_TOOL_STEPS = 6;
 const ORDER_NUMBER_PATTERN = /\b[A-Z]{1,4}-\d+\b/i;
 const CATALOG_FOLLOW_UP_PATTERN =
   /(?:details?|specs?|specifications?|features?|price|availability|colors?|size|tell me more|more info|more information|it|this one|that one|تفاصيل|مواصفات|سعر|التوفر|ألوان|الوان|مقاس|المزيد|هذا المنتج|هذا|هالمنتج)/i;
+const ALTERNATIVE_OPTIONS_PATTERN =
+  /(?:others?|other ones?|something else|more options?|alternatives?|another options?|other recommendations?|غيرها|غيره|خيارات أخرى|اقتراحات أخرى|شيء آخر)/i;
 const RECOMMENDATION_PATTERN = /(?:recommend|best|top|gift|رشح|أفضل|افضل|أنسب|انسب|هدية)/i;
 const CATALOG_BROWSE_PATTERN = /(?:products|catalog|browse|show me products|اعرض المنتجات|منتجات|الكتالوج|الفئات)/i;
 const NON_CATALOG_PATTERN =
@@ -40,6 +42,8 @@ const LATEST_ORDER_PATTERN =
   /(?:latest order|most recent order|last order|newest order|where is my latest order|where is my most recent order|my latest order|my most recent order|آخر طلب|أحدث طلب|آخر طلب لي|أحدث طلب لي)/i;
 const ORDER_TRACKING_PATTERN =
   /(?:where is my order|track|tracking|shipment|delivery status|order status|status of my order|my order status|my order|طلبي|تتبع|الشحنة|حالة الطلب)/i;
+const ORDER_ITEMS_PATTERN =
+  /(?:what(?:'s| is)?(?: the)? (?:product|products|item|items)(?: of it| in it| in (?:my|the) (?:latest )?order| it has| does it have)?|what products it has|what is the product of it|i mean the product in my latest order|what does it include|items included|what did i order|what's in (?:it|my order|the order|my latest order)|which items(?: are)? in (?:it|my order|the order))/i;
 const RETURN_PATTERN = /(?:refund|return|exchange|استرجاع|استرداد|إرجاع|ارجاع)/i;
 const CANCELLATION_PATTERN =
   /(?:cancel|cancellation|change address|edit order|modify order|update order|إلغاء|الغاء|تعديل العنوان|تعديل الطلب)/i;
@@ -201,6 +205,13 @@ function buildForcedFunctionToolChoice(name) {
     type: "function",
     name
   };
+}
+
+function countMeaningfulWords(message = "") {
+  return String(message)
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word && !/^[^a-z0-9\u0600-\u06FF]+$/i.test(word)).length;
 }
 
 function extractOrderNumber(message = "") {
@@ -618,6 +629,60 @@ function formatStockStatus(stockStatus = "", locale = "en") {
   }
 }
 
+function findMentionedProductIds(text = "") {
+  const haystack = String(text ?? "").toLowerCase();
+  return products
+    .filter((product) => haystack.includes(product.name.toLowerCase()) || haystack.includes(product.nameAr.toLowerCase()))
+    .map((product) => product.id);
+}
+
+function findRecentRecommendationQuery(history = []) {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    if (entry?.role === "user" && RECOMMENDATION_PATTERN.test(entry.content ?? "")) {
+      return String(entry.content ?? "");
+    }
+  }
+
+  return null;
+}
+
+function findRecentRecommendationProductIds(history = []) {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    if (entry?.role !== "assistant") {
+      continue;
+    }
+
+    const ids = findMentionedProductIds(entry.content ?? "");
+    if (ids.length > 0) {
+      return Array.from(new Set(ids));
+    }
+  }
+
+  return [];
+}
+
+function findRecentOrderReference(history = []) {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    const match = extractOrderNumber(String(entry?.content ?? ""));
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+}
+
+function hasRecentOrderContext(history = []) {
+  return history
+    .slice(-6)
+    .some((entry) =>
+      /latest visible order|your order [A-Z]{1,4}-\d+|could you please share the exact order number|share your order number/i.test(String(entry?.content ?? ""))
+    );
+}
+
 function buildCatalogToolTrace({ action, output, sharingBoundary }) {
   return [
     {
@@ -670,25 +735,63 @@ function buildLatestVisibleOrderReply(order, locale = "en") {
   return `Your latest visible order is ${order.orderNumber}. Status: ${order.status}. ETA: ${order.eta}. Courier: ${order.courier}.`;
 }
 
-function planDeterministicOrderAction(message = "") {
+function buildOrderItemsReply(order, locale = "en") {
+  const items = Array.isArray(order?.items) ? order.items.filter(Boolean) : [];
+  if (items.length === 0) {
+    return locale === "ar"
+      ? `أستطيع رؤية الطلب ${order.orderNumber}، لكن تفاصيل المنتجات غير ظاهرة لدي الآن.`
+      : `I can see order ${order.orderNumber}, but the item details are not visible in my current view yet.`;
+  }
+
+  if (locale === "ar") {
+    return `الطلب ${order.orderNumber} يحتوي على:\n- ${items.join("\n- ")}`;
+  }
+
+  return `Order ${order.orderNumber} includes:\n- ${items.join("\n- ")}`;
+}
+
+function planDeterministicOrderAction(message = "", history = []) {
   if (PROFILE_PATTERN.test(message) || RETURN_PATTERN.test(message) || CANCELLATION_PATTERN.test(message) || POLICY_PATTERN.test(message) || HUMAN_HANDOFF_PATTERN.test(message)) {
     return null;
   }
 
   const orderNumber = extractOrderNumber(message);
-  if (orderNumber && ORDER_TRACKING_PATTERN.test(message)) {
+  const recentOrderNumber = findRecentOrderReference(history);
+  const orderItemsFollowUp = ORDER_ITEMS_PATTERN.test(message);
+  const recentOrderContext = hasRecentOrderContext(history);
+  const bareOrderReference = Boolean(orderNumber && String(message).trim().toUpperCase() === orderNumber.toUpperCase());
+
+  if (orderNumber && (ORDER_TRACKING_PATTERN.test(message) || orderItemsFollowUp || recentOrderContext || bareOrderReference)) {
     return {
       tool: "get_order_details",
       args: {
         orderNumber
-      }
+      },
+      responseMode: orderItemsFollowUp ? "items" : "status"
     };
+  }
+
+  if (orderItemsFollowUp) {
+    return recentOrderNumber
+      ? {
+          tool: "get_order_details",
+          args: {
+            orderNumber: recentOrderNumber
+          },
+          responseMode: "items"
+        }
+      : {
+          tool: "list_customer_orders",
+          args: {},
+          responseMode: "items"
+        };
   }
 
   if (LATEST_ORDER_PATTERN.test(message) || ORDER_TRACKING_PATTERN.test(message)) {
     return {
       tool: "list_customer_orders",
-      args: {}
+      args: {},
+      responseMode: "status"
     };
   }
 
@@ -762,7 +865,10 @@ function buildDeterministicOrderResponse({ action, output, locale = "en", sharin
 
   if (action.tool === "get_order_details" && output.order) {
     return {
-      reply: buildSpecificOrderReply(output.order, locale),
+      reply:
+        action.responseMode === "items"
+          ? buildOrderItemsReply(output.order, locale)
+          : buildSpecificOrderReply(output.order, locale),
       intent: "order_tracking",
       confidence: 0.95,
       toolTrace,
@@ -798,7 +904,10 @@ function buildDeterministicOrderResponse({ action, output, locale = "en", sharin
   }
 
   return {
-    reply: buildLatestVisibleOrderReply(latestOrder, locale),
+    reply:
+      action.responseMode === "items"
+        ? buildOrderItemsReply(latestOrder, locale)
+        : buildLatestVisibleOrderReply(latestOrder, locale),
     intent: "order_tracking",
     confidence: 0.91,
     toolTrace,
@@ -972,6 +1081,17 @@ function planDeterministicCatalogAction(message = "", history = []) {
     return null;
   }
 
+  if (ALTERNATIVE_OPTIONS_PATTERN.test(message)) {
+    const recentRecommendationQuery = findRecentRecommendationQuery(history);
+    if (recentRecommendationQuery) {
+      return {
+        query: recentRecommendationQuery,
+        mode: "recommendation",
+        excludeProductIds: findRecentRecommendationProductIds(history)
+      };
+    }
+  }
+
   if (RECOMMENDATION_PATTERN.test(message)) {
     return {
       query: message,
@@ -1139,9 +1259,12 @@ export function createSupportAgent({ track = () => {} } = {}) {
       commerceProvider,
       track
     });
+    const availableTools = HUMAN_HANDOFF_PATTERN.test(message)
+      ? toolbox.tools
+      : toolbox.tools.filter((tool) => tool.name !== "create_handoff");
     const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
     const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
-    const deterministicOrderAction = planDeterministicOrderAction(message);
+    const deterministicOrderAction = planDeterministicOrderAction(message, visibleHistory);
     const deterministicPolicyAction = planDeterministicPolicyAction(message);
     const shouldBypassProviderForCatalog =
       deterministicCatalogAction &&
@@ -1226,7 +1349,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
         model,
         instructions,
         input: conversationInput,
-        tools: toolbox.tools,
+        tools: availableTools,
         requestOptions,
         track,
         sessionId,
@@ -1297,7 +1420,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
           model,
           instructions,
           input: conversationInput,
-          tools: toolbox.tools,
+          tools: availableTools,
           requestOptions,
           track,
           sessionId,

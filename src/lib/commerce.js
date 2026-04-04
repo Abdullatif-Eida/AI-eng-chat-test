@@ -220,14 +220,18 @@ export function getCatalogSummary(locale = "en") {
     : `Here are the main categories we currently carry:\n${categoryLines}\n\nTell me the product, category, or what you need, and I’ll search the catalog for the best fits.`;
 }
 
-export function recommendProducts(query = "", locale = "en") {
+export function recommendProducts(query = "", locale = "en", options = {}) {
+  const excludedIds = new Set((options.excludeProductIds ?? []).map((value) => String(value)));
   const ranked = getRankedProducts(query);
+  const filteredRanked = ranked.filter((entry) => !excludedIds.has(entry.product.id));
 
-  if (ranked.length > 0) {
-    return ranked.slice(0, 4).map((entry) => entry.product);
+  if (filteredRanked.length > 0) {
+    return filteredRanked.slice(0, 4).map((entry) => entry.product);
   }
 
-  const sorted = [...products].sort((left, right) => right.rating - left.rating || left.priceSar - right.priceSar);
+  const sorted = [...products]
+    .filter((product) => !excludedIds.has(product.id))
+    .sort((left, right) => right.rating - left.rating || left.priceSar - right.priceSar);
   return locale === "ar" ? sorted.slice(0, 4).reverse() : sorted.slice(0, 4);
 }
 

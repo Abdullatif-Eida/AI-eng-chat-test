@@ -11,6 +11,7 @@ const TICKET_PATTERN = /\bhandoff-[a-z0-9-]+\b/gi;
 const JWT_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g;
 const BEARER_PATTERN = /\bBearer\s+[A-Za-z0-9._-]{16,}\b/gi;
 const TOKEN_PATTERN = /\[\[(?:email|order|phone|payment|ticket|secret)_\d+\]\]/gi;
+const TOKEN_ALIAS_PATTERN = /(?<!\[\[)\b(email|order|phone|payment|ticket|secret)_(\d+)\b(?!\]\])/gi;
 
 function buildToken(type, id) {
   return `[[${type}_${id}]]`;
@@ -98,7 +99,12 @@ export function tokenizeText(text = "", boundaryInput) {
 
 export function detokenizeText(text = "", boundaryInput) {
   const boundary = createDataProtectionBoundary(boundaryInput);
-  return String(text ?? "").replace(TOKEN_PATTERN, (token) => boundary.tokenToRaw.get(token) ?? token);
+  const withCanonicalTokensRestored = String(text ?? "").replace(TOKEN_ALIAS_PATTERN, (match, type, id) => {
+    const canonicalToken = buildToken(String(type).toLowerCase(), id);
+    return boundary.tokenToRaw.has(canonicalToken) ? canonicalToken : match;
+  });
+
+  return withCanonicalTokensRestored.replace(TOKEN_PATTERN, (token) => boundary.tokenToRaw.get(token) ?? token);
 }
 
 export function tokenizeValue(value, boundaryInput) {
