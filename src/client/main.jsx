@@ -2372,7 +2372,7 @@ function SupportWidget({
             <div className="message-list">
               {messages.map((message) => (
                 <article key={message.id} className={`message-row ${message.role}`}>
-                  <div className={`message-bubble ${message.role}`}>
+                  <div className={`message-bubble ${message.role}`} dir="auto">
                     <p>{message.text}</p>
                     <div className="message-meta">
                       <span className="message-time">{formatMessageTime(message.sentAt, locale)}</span>

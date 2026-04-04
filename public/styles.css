@@ -2378,6 +2378,7 @@ html[dir="rtl"] .cart-list {
   display: flex;
   align-items: flex-end;
   gap: 10px;
+  direction: ltr;
 }
 
 .message-row.bot {

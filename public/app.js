@@ -24187,7 +24187,7 @@ function SupportWidget({
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
-              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, children: [
+              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, dir: "auto", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-meta", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-time", children: formatMessageTime(message.sentAt, locale) }) })
               ] }) }, message.id)),
