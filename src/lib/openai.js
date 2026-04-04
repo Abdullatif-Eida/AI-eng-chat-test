@@ -302,7 +302,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
       text,
       truncation: "auto",
       parallel_tool_calls: false,
-      store: false
+      store: true
     });
 
     try {
@@ -382,7 +382,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
             text,
             truncation: "auto",
             parallel_tool_calls: false,
-            store: false
+            store: true
           }
         });
       }

@@ -191,6 +191,7 @@ export function buildSupportResponseFormat() {
   return {
     format: {
       type: "json_schema",
+      name: "support_response",
       strict: true,
       schema: {
         type: "object",
