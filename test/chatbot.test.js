@@ -1034,6 +1034,42 @@ test("answers generic where-is-my-order asks from trusted visible orders without
   }
 });
 
+test("answers payment-method questions from trusted policy data without OpenRouter", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for deterministic policy answers."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "payment-policy-local",
+      message: "What payment methods do you support?"
+    });
+
+    assert.equal(result.intent, "policy_info");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(result.reply, /mada|Visa|Mastercard|Apple Pay|Cash on Delivery/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("does not treat anonymous browser-provided orders as verified order access", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();

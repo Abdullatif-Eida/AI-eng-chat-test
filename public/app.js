@@ -22677,7 +22677,7 @@ var STORAGE_KEYS = {
   queuedPrompt: "lean-souq-session-queued-prompt",
   checkoutNotice: "lean-souq-session-checkout-notice"
 };
-var CHAT_REQUEST_TIMEOUT_MS = 2e4;
+var CHAT_REQUEST_TIMEOUT_MS = 3e4;
 var MESSAGE_COOLDOWN_MS = 1500;
 var LEGACY_STORAGE_KEYS = {
   cart: "lean-souq-cart",

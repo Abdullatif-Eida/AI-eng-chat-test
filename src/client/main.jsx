@@ -484,7 +484,7 @@ const STORAGE_KEYS = {
   checkoutNotice: "lean-souq-session-checkout-notice"
 };
 
-const CHAT_REQUEST_TIMEOUT_MS = 20000;
+const CHAT_REQUEST_TIMEOUT_MS = 30000;
 const MESSAGE_COOLDOWN_MS = 1500;
 
 const LEGACY_STORAGE_KEYS = {

@@ -811,6 +811,93 @@ function buildDeterministicOrderResponse({ action, output, locale = "en", sharin
   };
 }
 
+function inferPolicyTopic(message = "") {
+  const normalized = String(message).toLowerCase();
+
+  if (/(?:return policy|refund policy|return|refund|exchange|استرجاع|استرداد|ارجاع|استبدال)/i.test(message)) {
+    return "returns";
+  }
+
+  if (/(?:privacy|data retention|data|cookies?|الخصوصية|البيانات|الاحتفاظ بالبيانات|الكوكيز)/i.test(message)) {
+    return "privacy";
+  }
+
+  if (/(?:terms|conditions|الشروط|الأحكام)/i.test(message)) {
+    return "terms";
+  }
+
+  if (/(?:shipping|delivery|shipment|الشحن|التوصيل)/i.test(message)) {
+    return "shipping";
+  }
+
+  if (/(?:payment|payments|mada|visa|mastercard|apple pay|cash on delivery|الدفع|مدى|فيزا|ماستركارد|ابل باي|الدفع عند الاستلام)/i.test(message)) {
+    return "payments";
+  }
+
+  if (/(?:contact|email|phone|whatsapp|support|التواصل|البريد|الايميل|واتساب|الدعم)/i.test(message)) {
+    return "contact";
+  }
+
+  return "general";
+}
+
+function planDeterministicPolicyAction(message = "") {
+  if (!POLICY_PATTERN.test(message)) {
+    return null;
+  }
+
+  return {
+    tool: "get_policy_information",
+    args: {
+      topic: inferPolicyTopic(message),
+      question: message
+    }
+  };
+}
+
+function buildDeterministicPolicyResponse({ action, output, locale = "en", sharingBoundary }) {
+  const toolTrace = buildOrderToolTrace({
+    tool: action.tool,
+    args: action.args,
+    output,
+    sharingBoundary
+  });
+
+  if (output?.ok === false) {
+    return {
+      reply: output.message,
+      intent: "policy_info",
+      confidence: 0.3,
+      degraded: output.code === "tool_error",
+      toolTrace,
+      structured: {
+        intent: "policy_info",
+        resolution: output.code === "tool_error" ? "temporary_failure" : "fallback",
+        handoffRecommended: output.code === "tool_error",
+        customerAction:
+          output.code === "tool_error"
+            ? locale === "ar"
+              ? "أعد المحاولة بعد قليل أو اطلب التحويل إلى موظف دعم."
+              : "Try again shortly or ask for a human agent."
+            : ""
+      }
+    };
+  }
+
+  return {
+    reply: output.answer,
+    intent: "policy_info",
+    confidence: 0.92,
+    toolTrace,
+    structured: {
+      intent: "policy_info",
+      resolution: "answered",
+      handoffRecommended: false,
+      customerAction: ""
+    }
+  };
+}
+
 function buildProductReply(match, locale = "en") {
   if (locale === "ar") {
     return [
@@ -1055,9 +1142,20 @@ export function createSupportAgent({ track = () => {} } = {}) {
     const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
     const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
     const deterministicOrderAction = planDeterministicOrderAction(message);
+    const deterministicPolicyAction = planDeterministicPolicyAction(message);
     const shouldBypassProviderForCatalog =
       deterministicCatalogAction &&
       deterministicCatalogAction.mode !== "product_lookup";
+
+    if (deterministicPolicyAction) {
+      const output = await toolbox.execute(deterministicPolicyAction.tool, deterministicPolicyAction.args);
+      return buildDeterministicPolicyResponse({
+        action: deterministicPolicyAction,
+        output,
+        locale,
+        sharingBoundary
+      });
+    }
 
     if (deterministicOrderAction) {
       const output = await toolbox.execute(deterministicOrderAction.tool, deterministicOrderAction.args);
