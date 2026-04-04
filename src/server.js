@@ -25,6 +25,8 @@ const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
 const allowRequestScopedOpenRouterKey = process.env.ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE === "true";
 const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
 
+
+
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
