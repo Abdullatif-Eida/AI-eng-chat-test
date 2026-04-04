@@ -21,18 +21,19 @@ The implementation is intentionally dependency-light so reviewers can run it qui
 npm install
 ```
 
-2. Configure the OpenAI key on the server side.
+2. Configure the OpenRouter key on the server side.
 
 For local development:
 
 ```bash
-export OPENAI_API_KEY="your_openai_key_here"
+export OPENROUTER_API_KEY="your_openrouter_key_here"
+export OPENROUTER_MODEL="openrouter/free"
 ```
 
 For Netlify:
 
-- Set `OPENAI_API_KEY` in the Netlify site environment variables.
-- You can also use `NETLIFY_OPENAI_API_KEY` if you want a Netlify-specific secret name.
+- Set `OPENROUTER_API_KEY` in the Netlify site environment variables.
+- You can also use `NETLIFY_OPENROUTER_API_KEY` if you want a Netlify-specific secret name.
 - Do not expose the key in client-side code.
 
 To connect real commerce systems instead of the seeded provider, you can also set:
@@ -46,7 +47,7 @@ To connect real commerce systems instead of the seeded provider, you can also se
 
 These paths support `{email}`, `{customerId}`, and `{orderNumber}` placeholders.
 
-The backend also accepts an override header named `x-openai-key` on `/api/chat`, but that should only be used by trusted server-to-server callers.
+The backend also accepts an override header named `x-openrouter-key` on `/api/chat`, but that should only be used by trusted server-to-server callers.
 
 Optional debug-only routes:
 
@@ -73,7 +74,8 @@ npm test
 
 - This project is designed to be reviewed from source code directly, including a zip or shared folder.
 - `npm start` builds the frontend bundle and starts the local server on port `3000`.
-- The chatbot is OpenAI-only and requires a valid server-side OpenAI key.
+- The chatbot is OpenRouter-only and requires a valid server-side OpenRouter key.
+- The default model is `openrouter/free`, so the app stays on OpenRouter's zero-cost router unless you explicitly override `OPENROUTER_MODEL`.
 - The recommended production setup is a Netlify environment variable, not a browser-exposed key.
 - If `COMMERCE_API_BASE_URL` is configured, the tool layer will use your real commerce APIs; otherwise it uses the seeded provider bundled with the project.
 
@@ -85,8 +87,8 @@ npm test
 - Multi-turn session handling for order lookups and refund flows
 - Basic analytics log for intent, resolution type, and locale
 - Arabic-aware locale detection with bilingual sample journeys
-- OpenAI Responses API orchestration over trusted commerce tools
-- Dedicated outbound tokenization layer so emails, order numbers, and similar identifiers are not sent raw to OpenAI
+- OpenRouter Responses API orchestration over trusted commerce tools
+- Dedicated outbound tokenization layer so emails, order numbers, and similar identifiers are not sent raw to OpenRouter
 - Provider-based commerce backend integration, ready for existing profile, order, and tracking APIs
 - Case-study docs for problem framing, solution design, and tooling decisions
 - KSA-aligned policy grounding for returns, privacy, and terms responses

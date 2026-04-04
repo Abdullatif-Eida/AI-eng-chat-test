@@ -301,27 +301,22 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
   });
 }
 
-function createMockOpenAIFetch() {
+function createMockOpenRouterFetch() {
   let responseCounter = 0;
-  const pending = new Map();
 
   return async (_url, options) => {
     const body = JSON.parse(options.body);
+    const toolOutputItem = [...(body.input ?? [])]
+      .reverse()
+      .find((item) => item?.type === "function_call_output");
 
-    if (!body.previous_response_id) {
+    if (!toolOutputItem) {
       const message = extractUserMessage(body.input);
       const toolCall = planToolCall(message);
-      const responseId = `resp_${++responseCounter}`;
-      const callId = `call_${responseCounter}`;
-
-      pending.set(responseId, {
-        message,
-        toolCall,
-        callId
-      });
+      const callId = `call_${++responseCounter}`;
 
       return createJsonResponse({
-        id: responseId,
+        id: `resp_${responseCounter}`,
         output: [
           {
             type: "function_call",
@@ -333,12 +328,20 @@ function createMockOpenAIFetch() {
       });
     }
 
-    const previous = pending.get(body.previous_response_id);
-    const toolOutput = normalizeToolOutput(body.input[0].output);
+    const message = extractUserMessage(body.input);
+    const callItem = [...body.input].reverse().find((item) => item?.type === "function_call");
+    const toolOutput = normalizeToolOutput(toolOutputItem.output);
+    const toolArgs = (() => {
+      try {
+        return JSON.parse(callItem.arguments);
+      } catch {
+        return {};
+      }
+    })();
     const structured = renderFinalPayload(
-      previous.message,
-      previous.toolCall.name,
-      previous.toolCall.args,
+      message,
+      callItem.name,
+      toolArgs,
       toolOutput
     );
     const reply = JSON.stringify(structured);
@@ -362,27 +365,27 @@ function createMockOpenAIFetch() {
   };
 }
 
-async function withMockedOpenAI(run, fetchImpl = createMockOpenAIFetch()) {
-  const previousKey = process.env.OPENAI_API_KEY;
+async function withMockedOpenRouter(run, fetchImpl = createMockOpenRouterFetch()) {
+  const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENROUTER_API_KEY = "test-key";
   global.fetch = fetchImpl;
 
   try {
     await run();
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
     global.fetch = previousFetch;
   }
 }
 
-test("uses OpenAI tool-calling to answer product questions", async () => {
-  await withMockedOpenAI(async () => {
+test("uses OpenRouter tool-calling to answer product questions", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "product-flow",
@@ -397,7 +400,7 @@ test("uses OpenAI tool-calling to answer product questions", async () => {
 });
 
 test("requires verified identity before exposing order data", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "secure-order",
@@ -411,7 +414,7 @@ test("requires verified identity before exposing order data", async () => {
 });
 
 test("reads order details from existing customer-visible data when email is verified", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "verified-order",
@@ -430,7 +433,7 @@ test("reads order details from existing customer-visible data when email is veri
 });
 
 test("does not leak another customer's order even if the order number is known", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "blocked-order",
@@ -448,7 +451,7 @@ test("does not leak another customer's order even if the order number is known",
 });
 
 test("does not let prompt-injection wording bypass order access controls", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "prompt-injection-order",
@@ -462,7 +465,7 @@ test("does not let prompt-injection wording bypass order access controls", async
 });
 
 test("scopes cache to the authenticated shopper so order data does not bleed across identities", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     const first = await bot.chat({
@@ -487,8 +490,8 @@ test("scopes cache to the authenticated shopper so order data does not bleed acr
   });
 });
 
-test("checks return eligibility through OpenAI-routed tools", async () => {
-  await withMockedOpenAI(async () => {
+test("checks return eligibility through OpenRouter-routed tools", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "returns-flow",
@@ -505,7 +508,7 @@ test("checks return eligibility through OpenAI-routed tools", async () => {
 });
 
 test("checks cancellation against live order state through tools", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "cancel-flow",
@@ -522,8 +525,8 @@ test("checks cancellation against live order state through tools", async () => {
   });
 });
 
-test("creates a human handoff ticket through the OpenAI tool flow", async () => {
-  await withMockedOpenAI(async () => {
+test("creates a human handoff ticket through the OpenRouter tool flow", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "handoff-flow",
@@ -536,7 +539,7 @@ test("creates a human handoff ticket through the OpenAI tool flow", async () => 
 });
 
 test("does not reuse a handoff across different shopper identities in the same session", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const first = await bot.chat({
       sessionId: "handoff-scope",
@@ -563,7 +566,7 @@ test("does not reuse a handoff across different shopper identities in the same s
 });
 
 test("answers privacy questions from policy data instead of guessing", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "policy-flow",
@@ -577,7 +580,7 @@ test("answers privacy questions from policy data instead of guessing", async () 
 });
 
 test("checks the saved shopper profile through the tool layer instead of guessing", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "profile-flow",
@@ -609,7 +612,7 @@ test("checks the saved shopper profile through the tool layer instead of guessin
 });
 
 test("keeps Arabic replies when the shopper writes in Arabic", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "arabic-flow",
@@ -626,8 +629,51 @@ test("keeps Arabic replies when the shopper writes in Arabic", async () => {
   });
 });
 
+test("prefers English replies when the shopper writes in English on an Arabic storefront", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "english-on-ar-storefront",
+      message: "Yes add it to the cart",
+      preferredLocale: "ar"
+    });
+
+    assert.equal(result.locale, "en");
+    assert.doesNotMatch(result.reply, /[\u0600-\u06FF]/);
+  });
+});
+
+test("switches back to English when a shopper follows an Arabic turn with an English message", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+
+    const arabicTurn = await bot.chat({
+      sessionId: "mixed-language-flow",
+      message: "أين طلبي KS-10388؟",
+      customerProfile: {
+        email: "faisal@example.com"
+      },
+      preferredLocale: "ar"
+    });
+
+    const englishTurn = await bot.chat({
+      sessionId: "mixed-language-flow",
+      message: "Where is my order KS-10388?",
+      customerProfile: {
+        email: "faisal@example.com"
+      },
+      preferredLocale: "ar"
+    });
+
+    assert.equal(arabicTurn.locale, "ar");
+    assert.equal(englishTurn.locale, "en");
+    assert.match(englishTurn.reply, /Your order KS-10388/i);
+    assert.doesNotMatch(englishTurn.reply, /[\u0600-\u06FF]/);
+  });
+});
+
 test("can check a just-created order through the latest-order flow", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "created-order-flow",
@@ -657,7 +703,7 @@ test("can check a just-created order through the latest-order flow", async () =>
 });
 
 test("uses the newest visible order when the shopper asks for the latest order", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "latest-order-flow",
@@ -698,9 +744,9 @@ test("uses the newest visible order when the shopper asks for the latest order",
   });
 });
 
-test("returns a clear configuration error when the OpenAI key is missing", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
+test("returns a clear configuration error when the OpenRouter key is missing", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_API_KEY;
 
   try {
     const bot = createChatbot();
@@ -710,20 +756,20 @@ test("returns a clear configuration error when the OpenAI key is missing", async
     });
 
     assert.equal(result.intent, "configuration_error");
-    assert.match(result.reply, /OpenAI API key is missing/i);
+    assert.match(result.reply, /OpenRouter API key is missing/i);
   } finally {
     if (previousKey !== undefined) {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
   }
 });
 
-test("sanitizes quoted and whitespace-padded OpenAI keys before sending requests", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
+test("sanitizes quoted and whitespace-padded OpenRouter keys before sending requests", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = '  "test-key"  ';
+  process.env.OPENROUTER_API_KEY = '  "test-key"  ';
 
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
   global.fetch = async (url, options) => {
     assert.equal(options.headers.Authorization, "Bearer test-key");
     return upstreamFetch(url, options);
@@ -740,92 +786,77 @@ test("sanitizes quoted and whitespace-padded OpenAI keys before sending requests
     assert.match(result.reply, /Mechanical Keyboard/);
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("retries with a fallback model when the first model is unavailable", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+test("defaults to the OpenRouter free router", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousModel = process.env.OPENROUTER_MODEL;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "broken-mini";
+  process.env.OPENROUTER_API_KEY = "test-key";
+  delete process.env.OPENROUTER_MODEL;
 
   const requestedModels = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
   global.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
     requestedModels.push(body.model);
-
-    if (body.model === "broken-mini") {
-      return createJsonResponse({
-        error: {
-          message: "The model `broken-mini` does not exist."
-        }
-      }, 404);
-    }
-
     return upstreamFetch(url, options);
   };
 
   try {
     const bot = createChatbot();
     const result = await bot.chat({
-      sessionId: "fallback-model",
+      sessionId: "openrouter-free-default",
       message: "Tell me about the Mechanical Keyboard"
     });
 
     assert.equal(result.intent, "product_information");
-    assert.match(result.reply, /Mechanical Keyboard/);
-    assert.deepEqual(requestedModels.slice(0, 2), ["broken-mini", "gpt-5-mini"]);
-
-    const analytics = bot.getAnalytics();
-    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered"));
-    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-5-mini"));
+    assert.ok(requestedModels.every((model) => model === "openrouter/free"));
+    assert.equal(bot.getAIMode().provider, "openrouter");
+    assert.equal(bot.getAIMode().freeOnly, true);
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
+    if (previousModel === undefined) {
+      delete process.env.OPENROUTER_MODEL;
     } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+      process.env.OPENROUTER_MODEL = previousModel;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("keeps gpt-5-nano for simple same-session follow-up turns", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
-  const previousDefaultModel = process.env.OPENAI_MODEL;
+test("keeps the configured OpenRouter free model across same-session follow-up turns", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousModel = process.env.OPENROUTER_MODEL;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
-  delete process.env.OPENAI_MODEL;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  process.env.OPENROUTER_MODEL = "openrouter/free";
 
   const requestedModels = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
   global.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
     requestedModels.push(body.model);
-
     return upstreamFetch(url, options);
   };
 
   try {
     const bot = createChatbot();
     const first = await bot.chat({
-      sessionId: "same-session-fallback",
+      sessionId: "same-session-openrouter-free",
       message: "Tell me about the Mechanical Keyboard",
       customerProfile: {
         name: "Abdullatif Eida",
@@ -834,7 +865,7 @@ test("keeps gpt-5-nano for simple same-session follow-up turns", async () => {
     });
 
     const second = await bot.chat({
-      sessionId: "same-session-fallback",
+      sessionId: "same-session-openrouter-free",
       message: "Tell me about the Wireless Mouse",
       customerProfile: {
         name: "Abdullatif Eida",
@@ -844,54 +875,41 @@ test("keeps gpt-5-nano for simple same-session follow-up turns", async () => {
 
     assert.equal(first.intent, "product_information");
     assert.equal(second.intent, "product_information");
-    assert.equal(requestedModels[0], "gpt-5-nano");
-    assert.ok(requestedModels.every((model) => model === "gpt-5-nano"));
+    assert.ok(requestedModels.every((model) => model === "openrouter/free"));
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
+    if (previousModel === undefined) {
+      delete process.env.OPENROUTER_MODEL;
     } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
-    }
-
-    if (previousDefaultModel === undefined) {
-      delete process.env.OPENAI_MODEL;
-    } else {
-      process.env.OPENAI_MODEL = previousDefaultModel;
+      process.env.OPENROUTER_MODEL = previousModel;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("falls back to gpt-5-nano when gpt-5-mini returns insufficient_quota", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
-  const previousDefaultModel = process.env.OPENAI_MODEL;
+test("retries without strict schema when a free model rejects structured output", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
-  process.env.OPENAI_MODEL = "gpt-5-mini";
+  process.env.OPENROUTER_API_KEY = "test-key";
 
-  const requestedModels = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  let schemaAttempts = 0;
+  const upstreamFetch = createMockOpenRouterFetch();
   global.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
-    requestedModels.push(body.model);
 
-    if (body.model === "gpt-5-mini") {
+    if (body.text?.format?.type === "json_schema") {
+      schemaAttempts += 1;
       return createJsonResponse({
         error: {
-          message: "You exceeded your current quota, please check your plan and billing details.",
-          type: "insufficient_quota",
-          code: "insufficient_quota"
+          message: "json_schema is not supported for this model."
         }
-      }, 429);
+      }, 400);
     }
 
     return upstreamFetch(url, options);
@@ -900,112 +918,37 @@ test("falls back to gpt-5-nano when gpt-5-mini returns insufficient_quota", asyn
   try {
     const bot = createChatbot();
     const result = await bot.chat({
-      sessionId: "quota-fallback",
-      message: "I need help finding a keyboard for travel and productivity.",
-      customerProfile: {
-        name: "Abdullatif Eida",
-        email: "test@example.com"
-      },
-      knownOrders: [{ id: "order_1" }]
+      sessionId: "schema-retry",
+      message: "Tell me about the Mechanical Keyboard"
     });
 
     assert.equal(result.intent, "product_information");
-    assert.ok(requestedModels.includes("gpt-5-mini"));
-    assert.ok(requestedModels.includes("gpt-5-nano"));
-    assert.ok(requestedModels.indexOf("gpt-5-mini") < requestedModels.indexOf("gpt-5-nano"));
+    assert.match(result.reply, /Mechanical Keyboard/);
+    assert.ok(schemaAttempts >= 1);
 
     const analytics = bot.getAnalytics();
-    assert.ok(analytics.some((event) => event.type === "model_fallback_retry" && event.fromModel === "gpt-5-mini"));
-    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered" && event.toModel === "gpt-5-nano"));
-    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-5-nano"));
+    assert.ok(analytics.some((event) => event.type === "structured_output_retry"));
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
-    }
-
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
-    } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
-    }
-
-    if (previousDefaultModel === undefined) {
-      delete process.env.OPENAI_MODEL;
-    } else {
-      process.env.OPENAI_MODEL = previousDefaultModel;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("returns a specific shopper-safe quota message when all model attempts hit insufficient_quota", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
-  const previousDefaultModel = process.env.OPENAI_MODEL;
+test("returns a shopper-safe message when the free OpenRouter path is rate limited", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
-  process.env.OPENAI_MODEL = "gpt-5-mini";
-
-  global.fetch = async () =>
-    createJsonResponse({
-      error: {
-        message: "You exceeded your current quota, please check your plan and billing details.",
-        type: "insufficient_quota",
-        code: "insufficient_quota"
-      }
-    }, 429);
-
-  try {
-    const bot = createChatbot();
-    const result = await bot.chat({
-      sessionId: "quota-message",
-      message: "how are you"
-    });
-
-    assert.equal(result.intent, "fallback");
-    assert.match(result.reply, /out of OpenAI quota/i);
-    assert.match(result.structured?.customerAction ?? "", /billing|quota/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
-    } else {
-      process.env.OPENAI_API_KEY = previousKey;
-    }
-
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
-    } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
-    }
-
-    if (previousDefaultModel === undefined) {
-      delete process.env.OPENAI_MODEL;
-    } else {
-      process.env.OPENAI_MODEL = previousDefaultModel;
-    }
-
-    global.fetch = previousFetch;
-  }
-});
-
-test("returns a specific shopper-safe rate limit message when all model attempts hit rate limits", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
-  const previousDefaultModel = process.env.OPENAI_MODEL;
-  const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
-  process.env.OPENAI_MODEL = "gpt-5-mini";
+  process.env.OPENROUTER_API_KEY = "test-key";
 
   global.fetch = async () =>
     createJsonResponse({
       error: {
         message: "Rate limit reached for requests per min (RPM). Please try again in 20s.",
-        type: "rate_limit_error"
+        code: "rate_limit_exceeded"
       }
     }, 429);
 
@@ -1017,122 +960,47 @@ test("returns a specific shopper-safe rate limit message when all model attempts
     });
 
     assert.equal(result.intent, "fallback");
-    assert.match(result.reply, /rate limited/i);
-    assert.match(result.structured?.customerAction ?? "", /wait/i);
+    assert.match(result.reply, /OpenRouter/i);
+    assert.match(result.reply, /busy|rate limited/i);
+    assert.match(result.structured?.customerAction ?? "", /wait|try again/i);
   } finally {
     if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
+      delete process.env.OPENROUTER_API_KEY;
     } else {
-      process.env.OPENAI_API_KEY = previousKey;
-    }
-
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
-    } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
-    }
-
-    if (previousDefaultModel === undefined) {
-      delete process.env.OPENAI_MODEL;
-    } else {
-      process.env.OPENAI_MODEL = previousDefaultModel;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("omits reasoning on non-gpt-5 fallback models during quota recovery", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+test("accepts a request-scoped OpenRouter key override for trusted backend callers", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
-  process.env.OPENAI_API_KEY = "test-key";
-  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
-  delete process.env.OPENAI_MODEL;
-
-  const requestedModels = [];
-  const upstreamFetch = createMockOpenAIFetch();
-  global.fetch = async (url, options) => {
-    const body = JSON.parse(options.body);
-    requestedModels.push(body.model);
-
-    if (["gpt-5-nano", "gpt-5.4-nano", "gpt-5-mini"].includes(body.model)) {
-      return createJsonResponse({
-        error: {
-          message: "Rate limit reached. Please try again shortly.",
-          type: "rate_limit_error"
-        }
-      }, 429);
-    }
-
-    if (body.model === "gpt-4.1-mini") {
-      assert.equal(body.reasoning, undefined);
-    }
-
-    return upstreamFetch(url, options);
-  };
-
-  try {
-    const bot = createChatbot();
-    const result = await bot.chat({
-      sessionId: "rpm-fallback",
-      message: "asdsa",
-      customerProfile: {
-        name: "Abdullatif Eida",
-        email: "test@example.com"
-      }
-    });
-
-    assert.notEqual(result.intent, "fallback");
-    assert.deepEqual(requestedModels.slice(0, 4), ["gpt-5-nano", "gpt-5.4-nano", "gpt-5-mini", "gpt-4.1-mini"]);
-
-    const analytics = bot.getAnalytics();
-    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered" && event.toModel === "gpt-4.1-mini"));
-    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-4.1-mini"));
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENAI_API_KEY;
-    } else {
-      process.env.OPENAI_API_KEY = previousKey;
-    }
-
-    if (previousCheapModel === undefined) {
-      delete process.env.OPENAI_CHEAP_MODEL;
-    } else {
-      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
-    }
-
-    global.fetch = previousFetch;
-  }
-});
-
-test("accepts a request-scoped OpenAI key override for trusted backend callers", async () => {
-  const previousKey = process.env.OPENAI_API_KEY;
-  delete process.env.OPENAI_API_KEY;
-  const previousFetch = global.fetch;
-  global.fetch = createMockOpenAIFetch();
+  global.fetch = createMockOpenRouterFetch();
 
   try {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "header-key",
       message: "Tell me about the Mechanical Keyboard",
-      openaiApiKey: "header-key-value"
+      openrouterApiKey: "header-key-value"
     });
 
     assert.equal(result.intent, "product_information");
     assert.match(result.reply, /Mechanical Keyboard/);
   } finally {
     if (previousKey !== undefined) {
-      process.env.OPENAI_API_KEY = previousKey;
+      process.env.OPENROUTER_API_KEY = previousKey;
     }
 
     global.fetch = previousFetch;
   }
 });
 
-test("supports injecting a custom commerce provider behind the OpenAI tool layer", async () => {
-  await withMockedOpenAI(async () => {
+test("supports injecting a custom commerce provider behind the OpenRouter tool layer", async () => {
+  await withMockedOpenRouter(async () => {
     const provider = {
       name: "custom-test-provider",
       getCatalogData({ mode }) {
@@ -1189,20 +1057,20 @@ test("supports injecting a custom commerce provider behind the OpenAI tool layer
 
 test("sanitizes upstream tool failures before they reach the shopper", async () => {
   let responseCounter = 0;
-  const pending = new Map();
 
   const customFetch = async (_url, options) => {
     const body = JSON.parse(options.body);
+    const toolOutputItem = [...(body.input ?? [])]
+      .reverse()
+      .find((item) => item?.type === "function_call_output");
 
-    if (!body.previous_response_id) {
+    if (!toolOutputItem) {
       const message = extractUserMessage(body.input);
       const toolCall = planToolCall(message);
-      const responseId = `resp_${++responseCounter}`;
-      const callId = `call_${responseCounter}`;
-      pending.set(responseId, { callId });
+      const callId = `call_${++responseCounter}`;
 
       return createJsonResponse({
-        id: responseId,
+        id: `resp_${responseCounter}`,
         output: [
           {
             type: "function_call",
@@ -1214,7 +1082,7 @@ test("sanitizes upstream tool failures before they reach the shopper", async () 
       });
     }
 
-    const toolOutput = normalizeToolOutput(body.input[0].output);
+    const toolOutput = normalizeToolOutput(toolOutputItem.output);
     const reply = toolOutput.message ?? "ok";
 
     return createJsonResponse({
@@ -1235,7 +1103,7 @@ test("sanitizes upstream tool failures before they reach the shopper", async () 
     });
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const provider = {
       getCustomerProfile() {
         return null;
@@ -1280,7 +1148,7 @@ test("sanitizes upstream tool failures before they reach the shopper", async () 
 });
 
 test("expires session memory so customer identity is not retained indefinitely", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     let currentNow = Date.now();
     const bot = createChatbot({
       now: () => currentNow,
@@ -1311,18 +1179,19 @@ test("expires session memory so customer identity is not retained indefinitely",
 
 test("resets protected history and retention stores when the verified shopper identity changes", async () => {
   const initialInputs = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
 
   const customFetch = async (_url, options) => {
     const body = JSON.parse(options.body);
-    if (!body.previous_response_id) {
+    const hasToolOutput = (body.input ?? []).some((item) => item?.type === "function_call_output");
+    if (!hasToolOutput) {
       initialInputs.push(body.input);
     }
 
     return upstreamFetch(_url, options);
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     await bot.chat({
@@ -1347,7 +1216,7 @@ test("resets protected history and retention stores when the verified shopper id
   assert.equal(initialInputs[1].length, 1);
 });
 
-test("bounds oversized shopper messages before sending them to OpenAI", async () => {
+test("bounds oversized shopper messages before sending them to OpenRouter", async () => {
   let capturedMessage = "";
 
   const customFetch = async (_url, options) => {
@@ -1372,7 +1241,7 @@ test("bounds oversized shopper messages before sending them to OpenAI", async ()
     });
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     await bot.chat({
       sessionId: "size-guard",
@@ -1384,23 +1253,24 @@ test("bounds oversized shopper messages before sending them to OpenAI", async ()
   }, customFetch);
 });
 
-test("tokenizes bearer tokens and JWT-like secrets before sharing context with OpenAI", async () => {
+test("tokenizes bearer tokens and JWT-like secrets before sharing context with OpenRouter", async () => {
   const initialRequests = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
   const jwt =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaG9wcGVyLTEyMyIsInNjb3BlIjoiY2hhdCJ9.signaturetoken123456";
   const bearer = "Bearer verysensitiveaccesstoken123456789";
 
   const customFetch = async (_url, options) => {
     const body = JSON.parse(options.body);
-    if (!body.previous_response_id) {
+    const hasToolOutput = (body.input ?? []).some((item) => item?.type === "function_call_output");
+    if (!hasToolOutput) {
       initialRequests.push(JSON.stringify(body));
     }
 
     return upstreamFetch(_url, options);
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     await bot.chat({
       sessionId: "secret-sharing",
@@ -1416,9 +1286,9 @@ test("tokenizes bearer tokens and JWT-like secrets before sharing context with O
   }
 });
 
-test("tokenizes sensitive order and email values before sharing context with OpenAI", async () => {
+test("tokenizes sensitive order and email values before sharing context with OpenRouter", async () => {
   const requests = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
 
   const customFetch = async (_url, options) => {
     const body = JSON.parse(options.body);
@@ -1427,7 +1297,7 @@ test("tokenizes sensitive order and email values before sharing context with Ope
     return upstreamFetch(_url, options);
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "protected-sharing",
@@ -1449,20 +1319,23 @@ test("tokenizes sensitive order and email values before sharing context with Ope
   }
 });
 
-test("redacts secret-shaped tool fields and truncates oversized tool payloads before OpenAI sees them", async () => {
+test("redacts secret-shaped tool fields and truncates oversized tool payloads before OpenRouter sees them", async () => {
   const forwardedToolPayloads = [];
-  const upstreamFetch = createMockOpenAIFetch();
+  const upstreamFetch = createMockOpenRouterFetch();
 
   const customFetch = async (_url, options) => {
     const body = JSON.parse(options.body);
-    if (body.previous_response_id && body.input?.[0]?.output) {
-      forwardedToolPayloads.push(body.input[0].output);
+    const toolOutputItem = [...(body.input ?? [])]
+      .reverse()
+      .find((item) => item?.type === "function_call_output");
+    if (toolOutputItem?.output) {
+      forwardedToolPayloads.push(toolOutputItem.output);
     }
 
     return upstreamFetch(_url, options);
   };
 
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const provider = {
       getCustomerProfile() {
         return null;
@@ -1524,7 +1397,7 @@ test("redacts secret-shaped tool fields and truncates oversized tool payloads be
 });
 
 test("stores analytics with hashed session references instead of raw session ids", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     await bot.chat({
       sessionId: "analytics-session",
@@ -1539,7 +1412,7 @@ test("stores analytics with hashed session references instead of raw session ids
 });
 
 test("builds analytics summaries for containment and journey mix", async () => {
-  await withMockedOpenAI(async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     await bot.chat({

@@ -4,7 +4,7 @@ import {
   sanitizeAnalyticsEvent,
   tokenizeText
 } from "./dataProtection.js";
-import { createSupportAgent } from "./openai.js";
+import { createSupportAgent } from "./aiProvider.js";
 import {
   clearSessionRetentionStore,
   createSessionRetentionStore
@@ -68,6 +68,30 @@ function sanitizeCustomerProfile(profile) {
   };
 }
 
+function detectMessageLocale(message = "") {
+  const trimmed = String(message ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const arabicMatches = trimmed.match(/[\u0600-\u06FF]/g) ?? [];
+  const latinMatches = trimmed.match(/[a-z]/gi) ?? [];
+
+  if (arabicMatches.length === 0 && latinMatches.length === 0) {
+    return null;
+  }
+
+  if (arabicMatches.length === 0) {
+    return "en";
+  }
+
+  if (latinMatches.length === 0) {
+    return "ar";
+  }
+
+  return latinMatches.length >= arabicMatches.length ? "en" : "ar";
+}
+
 function resetSensitiveSessionState(session, currentTime) {
   session.history = [];
   session.sharingBoundary = createDataProtectionBoundary();
@@ -109,12 +133,9 @@ function resolveReplyLocale(message, preferredLocale, session) {
     return session?.lastLocale ?? preferredLocale ?? "en";
   }
 
-  if (/[\u0600-\u06FF]/.test(trimmed)) {
-    return "ar";
-  }
-
-  if (/[a-z]/i.test(trimmed)) {
-    return "en";
+  const detectedMessageLocale = detectMessageLocale(trimmed);
+  if (detectedMessageLocale) {
+    return detectedMessageLocale;
   }
 
   return session?.lastLocale ?? preferredLocale ?? detectLocale(trimmed);
@@ -250,7 +271,7 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
     preferredLocale,
     customerProfile,
     knownOrders,
-    openaiApiKey
+    openrouterApiKey
   }) {
     const session = getSession(sessionId);
     const trimmedMessage = sanitizeMessage(message);
@@ -286,6 +307,7 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
     const result = await agent.respond({
       sessionId,
       locale,
+      storefrontLocale: preferredLocale ?? locale,
       message: trimmedMessage,
       history: priorHistory,
       customer: session.customer,
@@ -293,7 +315,7 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
       sharingBoundary: session.sharingBoundary,
       cacheStore: session.cacheStore,
       idempotencyStore: session.idempotencyStore,
-      openaiApiKey,
+      openrouterApiKey,
       commerceProvider
     });
 

@@ -136,13 +136,18 @@ export function selectSupportModel({
 
 export function buildSupportInstructions({
   locale = "en",
+  storefrontLocale = locale,
   customer,
   knownOrders,
   history
 }) {
+  const storefrontLanguageName = storefrontLocale === "ar" ? "Arabic" : "English";
+  const replyLanguageName = locale === "ar" ? "Arabic" : "English";
   const contextSummary = [
     `Current shopper context: ${describeCustomer(customer)}.`,
     `Known visible order count from the caller: ${Array.isArray(knownOrders) ? knownOrders.length : 0}.`,
+    `Storefront UI language: ${storefrontLanguageName}.`,
+    `Reply language for this turn: ${replyLanguageName}.`,
     history.length > 0 ? `Recent conversation:\n${summarizeHistory(history)}` : "Recent conversation: none."
   ].join("\n");
 
@@ -161,6 +166,8 @@ export function buildSupportInstructions({
       "إذا أعادت الأداة identity_required أو order_not_found أو tool_error، اشرح الخطوة التالية بوضوح ولا تخترع تفاصيل.",
       "استخدم التحويل البشري فقط للحالات الحساسة أو المحجوبة أو منخفضة الثقة أو الفشل المتكرر.",
       "عندما يكون الجواب واضحاً، اختم بسؤال قصير واحد عن الخطوة التالية الأكثر فائدة بدلاً من رد جامد.",
+      "لغة reply في هذه الجولة مقفلة على العربية لأن آخر رسالة من العميل في هذه الجولة كانت بالعربية.",
+      "لا تغيّر لغة reply إلى الإنجليزية فقط لأن واجهة المتجر أو رسالة سابقة أو أسماء المنتجات تستخدم الإنجليزية.",
       "أجب دائماً بالعربية الطبيعية.",
       "أنتج في النهاية JSON فقط يطابق المخطط المطلوب بدقة، مع reply نصاً طبيعياً للمستخدم.",
       contextSummary
@@ -181,6 +188,8 @@ export function buildSupportInstructions({
     "If a tool returns identity_required, order_not_found, or tool_error, explain the next best step clearly and do not invent details.",
     "Use human handoff only for sensitive, blocked, low-confidence, or repeated-failure cases.",
     "When the answer is clear, close with one short next-best-action question instead of sounding robotic or abrupt.",
+    "The reply language for this turn is locked to English because the latest shopper message in this turn is English.",
+    "Do not switch reply language to Arabic just because the storefront UI, earlier turns, or product names use Arabic.",
     "Always respond in the shopper's language.",
     "Your final answer must be JSON only and must match the required schema exactly. Put the natural shopper-facing message in reply.",
     contextSummary

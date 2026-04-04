@@ -22,7 +22,7 @@ const chatbot = createChatbot({
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
 const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
-const allowRequestScopedOpenAIKey = process.env.ALLOW_CLIENT_OPENAI_KEY_OVERRIDE === "true";
+const allowRequestScopedOpenRouterKey = process.env.ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE === "true";
 const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
 
 const contentTypes = {
@@ -160,7 +160,7 @@ const server = http.createServer(async (request, response) => {
         preferredLocale: parsed.preferredLocale === "ar" ? "ar" : "en",
         customerProfile: parsed.customerProfile ?? null,
         knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
-        openaiApiKey: allowRequestScopedOpenAIKey ? request.headers["x-openai-key"] : null
+        openrouterApiKey: allowRequestScopedOpenRouterKey ? request.headers["x-openrouter-key"] : null
       });
 
       sendJson(response, 200, {

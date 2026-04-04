@@ -8,7 +8,7 @@ const chatbot = createChatbot({
   commerceProvider: createCommerceProviderFromEnv()
 });
 const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
-const allowRequestScopedOpenAIKey = process.env.ALLOW_CLIENT_OPENAI_KEY_OVERRIDE === "true";
+const allowRequestScopedOpenRouterKey = process.env.ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE === "true";
 const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
 
 function json(statusCode, payload) {
@@ -130,8 +130,11 @@ export async function handler(event) {
         preferredLocale: normalizeLocale(parsed.preferredLocale),
         customerProfile: parsed.customerProfile ?? null,
         knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
-        openaiApiKey: allowRequestScopedOpenAIKey
-          ? event.headers?.["x-openai-key"] ?? event.headers?.["X-OpenAI-Key"] ?? null
+        openrouterApiKey: allowRequestScopedOpenRouterKey
+          ? event.headers?.["x-openrouter-key"] ??
+            event.headers?.["X-OpenRouter-Key"] ??
+            event.headers?.["X-Openrouter-Key"] ??
+            null
           : null
       });
 
