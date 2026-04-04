@@ -2048,23 +2048,35 @@ html[dir="rtl"] .cart-list {
 }
 
 .lead-capture-card input[type="text"],
-.lead-capture-card input[type="email"] {
+.lead-capture-card input[type="email"],
+.lead-capture-card input[type="tel"] {
+  width: 100%;
   min-height: 48px;
   border-radius: 15px;
   border: 1px solid #d7e4ef;
   background: #f8fbff;
   padding: 0 15px;
   color: #21314a;
+  font: inherit;
   outline: none;
+  appearance: none;
+  -webkit-appearance: none;
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 .lead-capture-card input[type="text"]:focus,
 .lead-capture-card input[type="email"]:focus,
+.lead-capture-card input[type="tel"]:focus,
 .widget-composer input:focus {
   border-color: rgba(10, 95, 134, 0.34);
   background: white;
   box-shadow: 0 0 0 4px rgba(10, 95, 134, 0.08);
+}
+
+.lead-capture-card input[type="text"]::placeholder,
+.lead-capture-card input[type="email"]::placeholder,
+.lead-capture-card input[type="tel"]::placeholder {
+  color: #6c7b90;
 }
 
 .lead-checkbox {
@@ -2808,7 +2820,8 @@ html[dir="rtl"] .support-teaser {
 
 html[dir="rtl"] .support-pill-copy,
 html[dir="rtl"] .lead-capture-card input[type="text"],
-html[dir="rtl"] .lead-capture-card input[type="email"] {
+html[dir="rtl"] .lead-capture-card input[type="email"],
+html[dir="rtl"] .lead-capture-card input[type="tel"] {
   text-align: right;
 }
 

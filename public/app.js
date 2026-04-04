@@ -24195,23 +24195,17 @@ function SupportWidget({
   const [compactMode, setCompactMode] = (0, import_react.useState)(false);
   const [leadName, setLeadName] = (0, import_react.useState)("");
   const [leadEmail, setLeadEmail] = (0, import_react.useState)("");
-  const [leadPhone, setLeadPhone] = (0, import_react.useState)("");
-  const [leadCustomerNumber, setLeadCustomerNumber] = (0, import_react.useState)("");
   const [leadNewsletter, setLeadNewsletter] = (0, import_react.useState)(false);
   const messageListRef = (0, import_react.useRef)(null);
   const emojiChoices = ["\u{1F642}", "\u{1F44D}", "\u{1F389}", "\u{1F64F}", "\u{1F499}", "\u{1F525}"];
   (0, import_react.useEffect)(() => {
     setLeadName(customerProfile.name ?? "");
     setLeadEmail(customerProfile.email ?? "");
-    setLeadPhone(customerProfile.phone ?? "");
-    setLeadCustomerNumber(customerProfile.customerNumber ?? "");
     setLeadNewsletter(customerProfile.newsletter ?? false);
   }, [
-    customerProfile.customerNumber,
     customerProfile.email,
     customerProfile.name,
-    customerProfile.newsletter,
-    customerProfile.phone
+    customerProfile.newsletter
   ]);
   (0, import_react.useEffect)(() => {
     if (!open) {
@@ -24242,6 +24236,109 @@ function SupportWidget({
   const composerNotice = loading ? text.sendingLocked : cooldownRemainingMs > 0 ? fillTemplate(text.cooldownNotice, {
     seconds: Math.max(1, Math.ceil(cooldownRemainingMs / 1e3))
   }) : "";
+  const supportOverview = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-stats", "aria-label": localizeText(locale, "Support overview", "\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u062F\u0639\u0645"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Fast replies", "\u0631\u062F\u0648\u062F \u0633\u0631\u064A\u0639\u0629") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Guided answers without leaving the product page.", "\u0625\u062C\u0627\u0628\u0627\u062A \u0645\u0648\u062C\u0647\u0629 \u0628\u062F\u0648\u0646 \u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0646 \u0635\u0641\u062D\u0629 \u0627\u0644\u0645\u0646\u062A\u062C.") })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Order-aware", "\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0637\u0644\u0628\u0627\u062A\u0643") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062A\u0633\u0627\u0639\u062F\u0646\u0627 \u0646\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0628\u062F\u0648\u0646 \u0623\u0646 \u0646\u0637\u0644\u0628\u0647\u0627 \u0645\u0646\u0643 \u0643\u0644 \u0645\u0631\u0629.") })
+    ] })
+  ] });
+  const leadCaptureSection = customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-capture-card lead-saved-card", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "You are ready to continue", "\u0623\u0646\u062A \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629") }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Your profile stays linked on this device.", "\u0645\u0644\u0641\u0643 \u0645\u062D\u0641\u0648\u0638 \u0648\u0645\u0631\u0628\u0648\u0637 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.") })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-summary-grid", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Name", "\u0627\u0644\u0627\u0633\u0645") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.name })
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Email", "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.email })
+      ] }),
+      customerProfile.phone ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Phone", "\u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.phone })
+      ] }) : null,
+      customerProfile.customerNumber ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Customer number", "\u0631\u0642\u0645 \u0627\u0644\u0639\u0645\u064A\u0644") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.customerNumber })
+      ] }) : null
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
+      locale,
+      "Orders and future support chats can continue with the same browser-session identity.",
+      "\u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0646\u0641\u0633 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062F\u0627\u062E\u0644 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D."
+    ) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "button", onClick: () => onSetView("chat"), children: localizeText(locale, "Continue in chat", "\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") }) })
+  ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+    "form",
+    {
+      className: "lead-capture-card",
+      onSubmit: (event) => {
+        event.preventDefault();
+        const trimmedName = leadName.trim();
+        const trimmedEmail = leadEmail.trim();
+        if (!trimmedName || !trimmedEmail) {
+          return;
+        }
+        onProfileSubmit({
+          name: trimmedName,
+          email: trimmedEmail,
+          phone: "",
+          customerNumber: "",
+          newsletter: leadNewsletter
+        });
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: text.introTitle }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Save your name and email once for faster support and order tracking.", "\u0627\u062D\u0641\u0638 \u0627\u0633\u0645\u0643 \u0648\u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0644\u062A\u062C\u0631\u0628\u0629 \u062F\u0639\u0645 \u0648\u062A\u062A\u0628\u0639 \u0623\u0633\u0631\u0639.") })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            type: "text",
+            value: leadName,
+            onChange: (event) => setLeadName(event.target.value),
+            placeholder: text.namePlaceholder,
+            required: true
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "input",
+          {
+            type: "email",
+            value: leadEmail,
+            onChange: (event) => setLeadEmail(event.target.value),
+            placeholder: text.emailPlaceholder,
+            required: true
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "lead-checkbox", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+            "input",
+            {
+              type: "checkbox",
+              checked: leadNewsletter,
+              onChange: (event) => setLeadNewsletter(event.target.checked)
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: text.newsletter })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
+          locale,
+          "We use this browser-session profile to personalize support and reconnect this chat without asking again during the same session.",
+          "\u0646\u0633\u062A\u062E\u062F\u0645 \u0645\u0644\u0641 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0647\u0630\u0627 \u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u062F\u0639\u0645 \u0648\u0631\u0628\u0637 \u0646\u0641\u0633 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629 \u0628\u062F\u0648\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0633\u0624\u0627\u0644 \u062E\u0644\u0627\u0644 \u0646\u0641\u0633 \u0627\u0644\u062C\u0644\u0633\u0629."
+        ) }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "submit", children: text.introSend }) })
+      ]
+    }
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "aside",
     {
@@ -24319,132 +24416,16 @@ function SupportWidget({
           ] })
         ] }),
         view === "home" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-home", children: [
+          !customerProfile.submitted ? supportOverview : null,
+          !customerProfile.submitted ? leadCaptureSection : null,
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-hero", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-home-eyebrow", children: localizeText(locale, "Storefront support", "\u062F\u0639\u0645 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062A\u062C\u0631") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.submitted ? localizeText(locale, `Welcome back, ${customerProfile.name}`, `\u0645\u0631\u062D\u0628\u064B\u0627 \u0628\u0639\u0648\u062F\u062A\u0643 ${customerProfile.name}`) : text.homeHero }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.offlineNotice }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-capability-row", children: capabilityPills.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-capability-pill", children: item }, item)) })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-stats", "aria-label": localizeText(locale, "Support overview", "\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u062F\u0639\u0645"), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Fast replies", "\u0631\u062F\u0648\u062F \u0633\u0631\u064A\u0639\u0629") }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Guided answers without leaving the product page.", "\u0625\u062C\u0627\u0628\u0627\u062A \u0645\u0648\u062C\u0647\u0629 \u0628\u062F\u0648\u0646 \u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0646 \u0635\u0641\u062D\u0629 \u0627\u0644\u0645\u0646\u062A\u062C.") })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Order-aware", "\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0637\u0644\u0628\u0627\u062A\u0643") }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062A\u0633\u0627\u0639\u062F\u0646\u0627 \u0646\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0628\u062F\u0648\u0646 \u0623\u0646 \u0646\u0637\u0644\u0628\u0647\u0627 \u0645\u0646\u0643 \u0643\u0644 \u0645\u0631\u0629.") })
-            ] })
-          ] }),
-          customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-capture-card lead-saved-card", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "You are ready to continue", "\u0623\u0646\u062A \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629") }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Your profile stays linked on this device.", "\u0645\u0644\u0641\u0643 \u0645\u062D\u0641\u0648\u0638 \u0648\u0645\u0631\u0628\u0648\u0637 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.") })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-summary-grid", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Name", "\u0627\u0644\u0627\u0633\u0645") }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.name })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Email", "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A") }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.email })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Phone", "\u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644") }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.phone || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Customer number", "\u0631\u0642\u0645 \u0627\u0644\u0639\u0645\u064A\u0644") }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.customerNumber || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
-              ] })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
-              locale,
-              "Orders and future support chats can continue with the same browser-session identity.",
-              "\u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0646\u0641\u0633 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062F\u0627\u062E\u0644 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D."
-            ) }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "button", onClick: () => onSetView("chat"), children: localizeText(locale, "Continue in chat", "\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") }) })
-          ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-            "form",
-            {
-              className: "lead-capture-card",
-              onSubmit: (event) => {
-                event.preventDefault();
-                const hasReachableIdentity = Boolean(
-                  leadEmail.trim() || leadPhone.trim() || leadCustomerNumber.trim()
-                );
-                if (!leadName.trim() || !hasReachableIdentity) {
-                  return;
-                }
-                onProfileSubmit({
-                  name: leadName.trim(),
-                  email: leadEmail.trim(),
-                  phone: leadPhone.trim(),
-                  customerNumber: leadCustomerNumber.trim(),
-                  newsletter: leadNewsletter
-                });
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: text.introTitle }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Save your details once for faster support and order tracking.", "\u0627\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0644\u062A\u062C\u0631\u0628\u0629 \u062F\u0639\u0645 \u0648\u062A\u062A\u0628\u0639 \u0623\u0633\u0631\u0639.") })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "input",
-                  {
-                    type: "text",
-                    value: leadName,
-                    onChange: (event) => setLeadName(event.target.value),
-                    placeholder: text.namePlaceholder
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "input",
-                  {
-                    type: "email",
-                    value: leadEmail,
-                    onChange: (event) => setLeadEmail(event.target.value),
-                    placeholder: text.emailPlaceholder
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "input",
-                  {
-                    type: "tel",
-                    value: leadPhone,
-                    onChange: (event) => setLeadPhone(event.target.value),
-                    placeholder: text.phonePlaceholder
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "input",
-                  {
-                    type: "text",
-                    value: leadCustomerNumber,
-                    onChange: (event) => setLeadCustomerNumber(event.target.value),
-                    placeholder: text.customerNumberPlaceholder
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "lead-checkbox", children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: leadNewsletter,
-                      onChange: (event) => setLeadNewsletter(event.target.checked)
-                    }
-                  ),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: text.newsletter })
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
-                  locale,
-                  "We use this browser-session profile to personalize support, reconnect this chat, and attach demo orders without asking again during the same session.",
-                  "\u0646\u0633\u062A\u062E\u062F\u0645 \u0645\u0644\u0641 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0647\u0630\u0627 \u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u062F\u0639\u0645\u060C \u0648\u0631\u0628\u0637 \u0646\u0641\u0633 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0625\u0644\u062D\u0627\u0642 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0628\u062F\u0648\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0633\u0624\u0627\u0644 \u062E\u0644\u0627\u0644 \u0646\u0641\u0633 \u0627\u0644\u062C\u0644\u0633\u0629."
-                ) }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "submit", children: text.introSend }) })
-              ]
-            }
-          ),
+          customerProfile.submitted ? supportOverview : null,
+          customerProfile.submitted ? leadCaptureSection : null,
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-section", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Start with a guided topic", "\u0627\u0628\u062F\u0623 \u0628\u0645\u0648\u0636\u0648\u0639 \u062C\u0627\u0647\u0632") }),

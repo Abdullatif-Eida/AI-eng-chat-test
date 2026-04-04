@@ -2385,8 +2385,6 @@ function SupportWidget({
   const [compactMode, setCompactMode] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
-  const [leadPhone, setLeadPhone] = useState("");
-  const [leadCustomerNumber, setLeadCustomerNumber] = useState("");
   const [leadNewsletter, setLeadNewsletter] = useState(false);
   const messageListRef = useRef(null);
   const emojiChoices = ["🙂", "👍", "🎉", "🙏", "💙", "🔥"];
@@ -2394,15 +2392,11 @@ function SupportWidget({
   useEffect(() => {
     setLeadName(customerProfile.name ?? "");
     setLeadEmail(customerProfile.email ?? "");
-    setLeadPhone(customerProfile.phone ?? "");
-    setLeadCustomerNumber(customerProfile.customerNumber ?? "");
     setLeadNewsletter(customerProfile.newsletter ?? false);
   }, [
-    customerProfile.customerNumber,
     customerProfile.email,
     customerProfile.name,
-    customerProfile.newsletter,
-    customerProfile.phone
+    customerProfile.newsletter
   ]);
 
   useEffect(() => {
@@ -2446,6 +2440,120 @@ function SupportWidget({
           seconds: Math.max(1, Math.ceil(cooldownRemainingMs / 1000))
         })
       : "";
+  const supportOverview = (
+    <section className="widget-home-stats" aria-label={localizeText(locale, "Support overview", "نظرة عامة على الدعم")}>
+      <article className="widget-mini-stat">
+        <strong>{localizeText(locale, "Fast replies", "ردود سريعة")}</strong>
+        <span>{localizeText(locale, "Guided answers without leaving the product page.", "إجابات موجهة بدون الخروج من صفحة المنتج.")}</span>
+      </article>
+      <article className="widget-mini-stat">
+        <strong>{localizeText(locale, "Order-aware", "مرتبطة بطلباتك")}</strong>
+        <span>{localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "بيانات الجلسة المحفوظة تساعدنا نربط الطلبات بدون أن نطلبها منك كل مرة.")}</span>
+      </article>
+    </section>
+  );
+  const leadCaptureSection = customerProfile.submitted ? (
+    <div className="lead-capture-card lead-saved-card">
+      <div className="widget-section-heading">
+        <strong>{localizeText(locale, "You are ready to continue", "أنت جاهز للمتابعة")}</strong>
+        <span>{localizeText(locale, "Your profile stays linked on this device.", "ملفك محفوظ ومربوط على هذا الجهاز.")}</span>
+      </div>
+      <div className="lead-summary-grid">
+        <div>
+          <span>{localizeText(locale, "Name", "الاسم")}</span>
+          <strong>{customerProfile.name}</strong>
+        </div>
+        <div>
+          <span>{localizeText(locale, "Email", "البريد الإلكتروني")}</span>
+          <strong dir="ltr">{customerProfile.email}</strong>
+        </div>
+        {customerProfile.phone ? (
+          <div>
+            <span>{localizeText(locale, "Phone", "رقم الجوال")}</span>
+            <strong dir="ltr">{customerProfile.phone}</strong>
+          </div>
+        ) : null}
+        {customerProfile.customerNumber ? (
+          <div>
+            <span>{localizeText(locale, "Customer number", "رقم العميل")}</span>
+            <strong dir="ltr">{customerProfile.customerNumber}</strong>
+          </div>
+        ) : null}
+      </div>
+      <p className="lead-card-note">
+        {localizeText(
+          locale,
+          "Orders and future support chats can continue with the same browser-session identity.",
+          "يمكن متابعة الطلبات والمحادثات القادمة بنفس الهوية المحفوظة داخل جلسة المتصفح."
+        )}
+      </p>
+      <div className="lead-actions">
+        <button className="lead-submit" type="button" onClick={() => onSetView("chat")}>
+          {localizeText(locale, "Continue in chat", "المتابعة في المحادثة")}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <form
+      className="lead-capture-card"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const trimmedName = leadName.trim();
+        const trimmedEmail = leadEmail.trim();
+
+        if (!trimmedName || !trimmedEmail) {
+          return;
+        }
+
+        onProfileSubmit({
+          name: trimmedName,
+          email: trimmedEmail,
+          phone: "",
+          customerNumber: "",
+          newsletter: leadNewsletter
+        });
+      }}
+    >
+      <div className="widget-section-heading">
+        <strong>{text.introTitle}</strong>
+        <span>{localizeText(locale, "Save your name and email once for faster support and order tracking.", "احفظ اسمك وبريدك الإلكتروني مرة واحدة لتجربة دعم وتتبع أسرع.")}</span>
+      </div>
+      <input
+        type="text"
+        value={leadName}
+        onChange={(event) => setLeadName(event.target.value)}
+        placeholder={text.namePlaceholder}
+        required
+      />
+      <input
+        type="email"
+        value={leadEmail}
+        onChange={(event) => setLeadEmail(event.target.value)}
+        placeholder={text.emailPlaceholder}
+        required
+      />
+      <label className="lead-checkbox">
+        <input
+          type="checkbox"
+          checked={leadNewsletter}
+          onChange={(event) => setLeadNewsletter(event.target.checked)}
+        />
+        <span>{text.newsletter}</span>
+      </label>
+      <p className="lead-card-note">
+        {localizeText(
+          locale,
+          "We use this browser-session profile to personalize support and reconnect this chat without asking again during the same session.",
+          "نستخدم ملف جلسة المتصفح هذا لتخصيص الدعم وربط نفس المحادثة بدون إعادة السؤال خلال نفس الجلسة."
+        )}
+      </p>
+      <div className="lead-actions">
+        <button className="lead-submit" type="submit">
+          {text.introSend}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <aside
@@ -2523,6 +2631,9 @@ function SupportWidget({
 
       {view === "home" ? (
         <div className="widget-home">
+          {!customerProfile.submitted ? supportOverview : null}
+          {!customerProfile.submitted ? leadCaptureSection : null}
+
           <section className="widget-home-hero">
             <span className="widget-home-eyebrow">{localizeText(locale, "Storefront support", "دعم داخل المتجر")}</span>
             <strong>{customerProfile.submitted
@@ -2538,126 +2649,8 @@ function SupportWidget({
             </div>
           </section>
 
-          <section className="widget-home-stats" aria-label={localizeText(locale, "Support overview", "نظرة عامة على الدعم")}>
-            <article className="widget-mini-stat">
-              <strong>{localizeText(locale, "Fast replies", "ردود سريعة")}</strong>
-              <span>{localizeText(locale, "Guided answers without leaving the product page.", "إجابات موجهة بدون الخروج من صفحة المنتج.")}</span>
-            </article>
-            <article className="widget-mini-stat">
-              <strong>{localizeText(locale, "Order-aware", "مرتبطة بطلباتك")}</strong>
-              <span>{localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "بيانات الجلسة المحفوظة تساعدنا نربط الطلبات بدون أن نطلبها منك كل مرة.")}</span>
-            </article>
-          </section>
-
-          {customerProfile.submitted ? (
-            <div className="lead-capture-card lead-saved-card">
-              <div className="widget-section-heading">
-                <strong>{localizeText(locale, "You are ready to continue", "أنت جاهز للمتابعة")}</strong>
-                <span>{localizeText(locale, "Your profile stays linked on this device.", "ملفك محفوظ ومربوط على هذا الجهاز.")}</span>
-              </div>
-              <div className="lead-summary-grid">
-                <div>
-                  <span>{localizeText(locale, "Name", "الاسم")}</span>
-                  <strong>{customerProfile.name}</strong>
-                </div>
-                <div>
-                  <span>{localizeText(locale, "Email", "البريد الإلكتروني")}</span>
-                  <strong dir="ltr">{customerProfile.email}</strong>
-                </div>
-                <div>
-                  <span>{localizeText(locale, "Phone", "رقم الجوال")}</span>
-                  <strong dir="ltr">{customerProfile.phone || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
-                </div>
-                <div>
-                  <span>{localizeText(locale, "Customer number", "رقم العميل")}</span>
-                  <strong dir="ltr">{customerProfile.customerNumber || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
-                </div>
-              </div>
-              <p className="lead-card-note">
-                {localizeText(
-                  locale,
-                  "Orders and future support chats can continue with the same browser-session identity.",
-                  "يمكن متابعة الطلبات والمحادثات القادمة بنفس الهوية المحفوظة داخل جلسة المتصفح."
-                )}
-              </p>
-              <div className="lead-actions">
-                <button className="lead-submit" type="button" onClick={() => onSetView("chat")}>
-                  {localizeText(locale, "Continue in chat", "المتابعة في المحادثة")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <form
-              className="lead-capture-card"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const hasReachableIdentity = Boolean(
-                  leadEmail.trim() || leadPhone.trim() || leadCustomerNumber.trim()
-                );
-
-                if (!leadName.trim() || !hasReachableIdentity) {
-                  return;
-                }
-
-                onProfileSubmit({
-                  name: leadName.trim(),
-                  email: leadEmail.trim(),
-                  phone: leadPhone.trim(),
-                  customerNumber: leadCustomerNumber.trim(),
-                  newsletter: leadNewsletter
-                });
-              }}
-            >
-              <div className="widget-section-heading">
-                <strong>{text.introTitle}</strong>
-                <span>{localizeText(locale, "Save your details once for faster support and order tracking.", "احفظ بياناتك مرة واحدة لتجربة دعم وتتبع أسرع.")}</span>
-              </div>
-              <input
-                type="text"
-                value={leadName}
-                onChange={(event) => setLeadName(event.target.value)}
-                placeholder={text.namePlaceholder}
-              />
-              <input
-                type="email"
-                value={leadEmail}
-                onChange={(event) => setLeadEmail(event.target.value)}
-                placeholder={text.emailPlaceholder}
-              />
-              <input
-                type="tel"
-                value={leadPhone}
-                onChange={(event) => setLeadPhone(event.target.value)}
-                placeholder={text.phonePlaceholder}
-              />
-              <input
-                type="text"
-                value={leadCustomerNumber}
-                onChange={(event) => setLeadCustomerNumber(event.target.value)}
-                placeholder={text.customerNumberPlaceholder}
-              />
-              <label className="lead-checkbox">
-                <input
-                  type="checkbox"
-                  checked={leadNewsletter}
-                  onChange={(event) => setLeadNewsletter(event.target.checked)}
-                />
-                <span>{text.newsletter}</span>
-              </label>
-              <p className="lead-card-note">
-                {localizeText(
-                  locale,
-                  "We use this browser-session profile to personalize support, reconnect this chat, and attach demo orders without asking again during the same session.",
-                  "نستخدم ملف جلسة المتصفح هذا لتخصيص الدعم، وربط نفس المحادثة، وإلحاق الطلبات التجريبية بدون إعادة السؤال خلال نفس الجلسة."
-                )}
-              </p>
-              <div className="lead-actions">
-                <button className="lead-submit" type="submit">
-                  {text.introSend}
-                </button>
-              </div>
-            </form>
-          )}
+          {customerProfile.submitted ? supportOverview : null}
+          {customerProfile.submitted ? leadCaptureSection : null}
 
           <section className="widget-home-section">
             <div className="widget-section-heading">
