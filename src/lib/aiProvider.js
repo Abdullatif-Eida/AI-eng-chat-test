@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { createCommerceToolbox } from "./agentTools.js";
 import { findProduct } from "./commerce.js";
+import { products } from "../data/products.js";
 import {
   detokenizeValue,
   tokenizeValue
@@ -20,11 +21,16 @@ import {
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/responses";
 const DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v3.2";
+const OPENROUTER_TIMEOUT_MS = Number(
+  process.env.OPENROUTER_TIMEOUT_MS ||
+  process.env.NETLIFY_OPENROUTER_TIMEOUT_MS ||
+  20000
+);
 const MAX_TOOL_STEPS = 6;
 const ORDER_NUMBER_PATTERN = /\b[A-Z]{1,4}-\d+\b/i;
 const CATALOG_FOLLOW_UP_PATTERN =
   /(?:details?|specs?|specifications?|features?|price|availability|colors?|size|tell me more|more info|more information|it|this one|that one|تفاصيل|مواصفات|سعر|التوفر|ألوان|الوان|مقاس|المزيد|هذا المنتج|هذا|هالمنتج)/i;
-const RECOMMENDATION_PATTERN = /(?:recommend|best|top|travel|gift|رشح|أفضل|افضل|أنسب|انسب|للسفر|هدية)/i;
+const RECOMMENDATION_PATTERN = /(?:recommend|best|top|gift|رشح|أفضل|افضل|أنسب|انسب|هدية)/i;
 const CATALOG_BROWSE_PATTERN = /(?:products|catalog|browse|show me products|اعرض المنتجات|منتجات|الكتالوج|الفئات)/i;
 const NON_CATALOG_PATTERN =
   /(?:where is my order|latest order|most recent order|last order|track|shipment|order\b|refund|return|cancel|change address|privacy|terms|payment|human|agent|profile|account|طلبي|آخر طلب|أحدث طلب|تتبع|استرجاع|استرداد|إلغاء|الغاء|الخصوصية|الشروط|الدفع|موظف|خدمة العملاء|حسابي|ملفي)/i;
@@ -41,6 +47,14 @@ const POLICY_PATTERN =
   /(?:privacy|data retention|terms|shipping|payment|payments|cookie|cookies|returns policy|refund policy|contact|الخصوصية|البيانات|الاحتفاظ بالبيانات|الشروط|الشحن|الدفع|الدفع|الكوكيز|سياسة الاسترجاع|سياسة الإرجاع|التواصل)/i;
 const HUMAN_HANDOFF_PATTERN =
   /(?:human|agent|representative|support team|real person|موظف|ممثل خدمة|خدمة العملاء|فريق الدعم)/i;
+const CATEGORY_TERMS = Array.from(
+  new Set(
+    products
+      .flatMap((product) => [product.category, product.categoryAr])
+      .filter(Boolean)
+      .map((value) => String(value).toLowerCase())
+  )
+);
 
 class OpenRouterRequestError extends Error {
   constructor(message, { status = null, responseText = "" } = {}) {
@@ -113,11 +127,31 @@ async function requestOpenRouter({
   apiKey,
   body
 }) {
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: "POST",
-    headers: buildOpenRouterHeaders(apiKey),
-    body: JSON.stringify(body)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+  let response;
+
+  try {
+    response = await fetch(OPENROUTER_API_URL, {
+      method: "POST",
+      headers: buildOpenRouterHeaders(apiKey),
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new OpenRouterRequestError(
+        `OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS}ms.`,
+        {
+          status: 408
+        }
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const text = await response.text();
@@ -316,6 +350,18 @@ function classifyProviderFailure(error, locale = "en") {
   const haystack = error instanceof OpenRouterRequestError
     ? `${error.message}\n${error.responseText}`.toLowerCase()
     : String(error?.message ?? "").toLowerCase();
+
+  if (haystack.includes("timed out") || haystack.includes("timeout")) {
+    return locale === "ar"
+      ? {
+          reply: "استغرقت خدمة الدعم الذكية وقتاً أطول من المتوقع. حاول مرة أخرى الآن، وإذا استمرت المشكلة أطلب التحويل إلى موظف دعم.",
+          customerAction: "أعد المحاولة الآن أو اطلب التحويل إلى موظف دعم."
+        }
+      : {
+          reply: "The AI support service took too long to respond. Please retry now, or ask me to escalate this to a human agent if it keeps happening.",
+          customerAction: "Retry now or ask for a human agent."
+        };
+  }
 
   if (
     haystack.includes("rate_limit_exceeded") ||
@@ -572,9 +618,45 @@ function findRecentProductReference(message = "", history = []) {
   return null;
 }
 
+function normalizeCatalogText(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[!?.,،؛:()/-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function findCategoryReference(message = "") {
+  const normalizedMessage = ` ${normalizeCatalogText(message)} `;
+
+  for (const category of CATEGORY_TERMS) {
+    const normalizedCategory = normalizeCatalogText(category);
+    if (normalizedCategory && normalizedMessage.includes(` ${normalizedCategory} `)) {
+      return category;
+    }
+  }
+
+  return null;
+}
+
 function planDeterministicCatalogAction(message = "", history = []) {
   if (NON_CATALOG_PATTERN.test(message)) {
     return null;
+  }
+
+  if (RECOMMENDATION_PATTERN.test(message)) {
+    return {
+      query: message,
+      mode: "recommendation"
+    };
+  }
+
+  const categoryReference = findCategoryReference(message);
+  if (categoryReference) {
+    return {
+      query: categoryReference,
+      mode: "category_browse"
+    };
   }
 
   const directProductMatch = findProduct(message);
@@ -582,13 +664,6 @@ function planDeterministicCatalogAction(message = "", history = []) {
     return {
       query: directProductMatch.name,
       mode: "product_lookup"
-    };
-  }
-
-  if (RECOMMENDATION_PATTERN.test(message)) {
-    return {
-      query: message,
-      mode: "recommendation"
     };
   }
 
@@ -736,10 +811,23 @@ export function createSupportAgent({ track = () => {} } = {}) {
       commerceProvider,
       track
     });
+    const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
+    const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
+    const shouldBypassProviderForCatalog =
+      deterministicCatalogAction &&
+      deterministicCatalogAction.mode !== "product_lookup";
+
+    if (shouldBypassProviderForCatalog) {
+      const output = await toolbox.execute("search_catalog", deterministicCatalogAction);
+      return buildDeterministicCatalogResponse({
+        action: deterministicCatalogAction,
+        output,
+        locale,
+        sharingBoundary
+      });
+    }
 
     if (!apiKey) {
-      const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
-      const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
       if (deterministicCatalogAction) {
         const output = await toolbox.execute("search_catalog", deterministicCatalogAction);
         return buildDeterministicCatalogResponse({
@@ -869,6 +957,16 @@ export function createSupportAgent({ track = () => {} } = {}) {
 
       throw new Error("OpenRouter tool loop exceeded the safety limit.");
     } catch (error) {
+      if (deterministicCatalogAction) {
+        const output = await toolbox.execute("search_catalog", deterministicCatalogAction);
+        return buildDeterministicCatalogResponse({
+          action: deterministicCatalogAction,
+          output,
+          locale,
+          sharingBoundary
+        });
+      }
+
       const failure = classifyProviderFailure(error, locale);
 
       track({

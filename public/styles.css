@@ -2404,6 +2404,23 @@ html[dir="rtl"] .cart-list {
   white-space: pre-line;
 }
 
+.message-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.message-retry {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 95, 134, 0.18);
+  background: rgba(13, 95, 134, 0.08);
+  color: #0d5f86;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .message-meta {
   display: flex;
   align-items: center;
@@ -2430,6 +2447,11 @@ html[dir="rtl"] .cart-list {
   border: 1px solid #deebf5;
   color: #18354d;
   border-bottom-left-radius: 8px;
+}
+
+.message-bubble.message-error {
+  background: #fff8f5;
+  border-color: #f1d5c8;
 }
 
 .message-bubble.bot .message-meta {
@@ -2468,7 +2490,9 @@ html[dir="rtl"] .cart-list {
   min-height: 82px;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  grid-template-areas: "send input emoji";
+  grid-template-areas:
+    "notice notice notice"
+    "send input emoji";
   gap: 8px;
   align-items: center;
   border-top: 1px solid rgba(205, 222, 236, 0.75);
@@ -2476,6 +2500,14 @@ html[dir="rtl"] .cart-list {
   position: relative;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(18px);
+}
+
+.composer-notice {
+  grid-area: notice;
+  min-height: 18px;
+  color: rgba(49, 84, 112, 0.82);
+  font-size: 0.74rem;
+  line-height: 1.4;
 }
 
 .send-button {
@@ -2521,6 +2553,14 @@ html[dir="rtl"] .cart-list {
   color: white;
   border-color: transparent;
   box-shadow: 0 14px 28px rgba(10, 95, 134, 0.25);
+}
+
+.send-button:disabled,
+.emoji-button:disabled,
+.message-retry:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .emoji-button {
@@ -2715,7 +2755,9 @@ html[dir="rtl"] .lead-checkbox,
 html[dir="rtl"] .prompt-row,
 html[dir="rtl"] .widget-composer {
   direction: rtl;
-  grid-template-areas: "emoji input send";
+  grid-template-areas:
+    "notice notice notice"
+    "emoji input send";
 }
 
 html[dir="rtl"] .send-button svg {
@@ -2784,7 +2826,9 @@ html[dir="rtl"] .widget-header-end {
 
 html[dir="rtl"] .widget-composer {
   direction: ltr;
-  grid-template-areas: "emoji input send";
+  grid-template-areas:
+    "notice notice notice"
+    "emoji input send";
 }
 
 html[dir="rtl"] .widget-composer input {
@@ -3050,6 +3094,10 @@ html[dir="rtl"] .product-price-card strong {
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
     padding-inline: 12px;
     background: rgba(255, 255, 255, 0.94);
+  }
+
+  .composer-notice {
+    font-size: 0.72rem;
   }
 
   .widget-home {

@@ -22409,6 +22409,12 @@ var localized = {
       poweredBrand: "AI SUPPORT",
       meta: "Intent coverage: product info, tracking, returns, handoff",
       typing: "Typing\u2026",
+      retry: "Retry",
+      sendingLocked: "Please wait for the current reply before sending another message.",
+      cooldownNotice: "Please wait {seconds}s before sending the next message.",
+      timeoutError: "That reply took too long. Tap retry to send the same message again.",
+      temporaryError: "I hit a temporary issue while sending that message. Tap retry to try the same request again.",
+      offlineError: "You appear to be offline. Reconnect and tap retry to send the same message again.",
       afterIntro: "Thanks {name}. I\u2019ve saved your details and I\u2019m ready to help. What would you like to do first?",
       orderCreatedFollowUp: "Your order {orderNumber} has been created. I can track it for you, explain the status, or check the shopper profile saved for this session."
     },
@@ -22613,6 +22619,12 @@ var localized = {
       poweredBrand: "AI SUPPORT",
       meta: "\u0646\u0637\u0627\u0642 \u0627\u0644\u062E\u062F\u0645\u0629: \u0645\u0646\u062A\u062C\u0627\u062A\u060C \u062A\u062A\u0628\u0639\u060C \u0625\u0631\u062C\u0627\u0639\u060C \u062A\u0635\u0639\u064A\u062F",
       typing: "\u062C\u0627\u0631\u064A \u0627\u0644\u0643\u062A\u0627\u0628\u0629\u2026",
+      retry: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629",
+      sendingLocked: "\u064A\u0631\u062C\u0649 \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0631\u062F \u0627\u0644\u062D\u0627\u0644\u064A \u0642\u0628\u0644 \u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 \u062C\u062F\u064A\u062F\u0629.",
+      cooldownNotice: "\u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 {seconds} \u062B \u0642\u0628\u0644 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629.",
+      timeoutError: "\u0627\u0633\u062A\u063A\u0631\u0642 \u0627\u0644\u0631\u062F \u0648\u0642\u062A\u0627\u064B \u0623\u0637\u0648\u0644 \u0645\u0646 \u0627\u0644\u0645\u062A\u0648\u0642\u0639. \u0627\u0636\u063A\u0637 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0625\u0631\u0633\u0627\u0644 \u0646\u0641\u0633 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
+      temporaryError: "\u0648\u0627\u062C\u0647\u0646\u0627 \u0645\u0634\u0643\u0644\u0629 \u0645\u0624\u0642\u062A\u0629 \u0623\u062B\u0646\u0627\u0621 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629. \u0627\u0636\u063A\u0637 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u062A\u062C\u0631\u0628\u0629 \u0646\u0641\u0633 \u0627\u0644\u0637\u0644\u0628 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
+      offlineError: "\u064A\u0628\u062F\u0648 \u0623\u0646\u0643 \u063A\u064A\u0631 \u0645\u062A\u0635\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A. \u0623\u0639\u062F \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u062B\u0645 \u0627\u0636\u063A\u0637 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0625\u0631\u0633\u0627\u0644 \u0646\u0641\u0633 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
       afterIntro: "\u0634\u0643\u0631\u064B\u0627 {name}. \u062D\u0641\u0638\u062A \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0648\u0623\u0646\u0627 \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u0633\u0627\u0639\u062F\u0629. \u0645\u0627 \u0627\u0644\u0630\u064A \u062A\u0631\u064A\u062F \u0627\u0644\u0628\u062F\u0621 \u0628\u0647\u061F",
       orderCreatedFollowUp: "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0637\u0644\u0628\u0643 {orderNumber}. \u0623\u0642\u062F\u0631 \u0623\u062A\u0627\u0628\u0639 \u062D\u0627\u0644\u062A\u0647 \u0644\u0643\u060C \u0623\u0634\u0631\u062D \u0648\u0636\u0639 \u0627\u0644\u0634\u062D\u0646\u060C \u0623\u0648 \u0623\u0631\u0627\u062C\u0639 \u0645\u0644\u0641 \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u0641\u0648\u0638 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062C\u0644\u0633\u0629."
     },
@@ -22665,6 +22677,8 @@ var STORAGE_KEYS = {
   queuedPrompt: "lean-souq-session-queued-prompt",
   checkoutNotice: "lean-souq-session-checkout-notice"
 };
+var CHAT_REQUEST_TIMEOUT_MS = 2e4;
+var MESSAGE_COOLDOWN_MS = 1500;
 var LEGACY_STORAGE_KEYS = {
   cart: "lean-souq-cart",
   orders: "lean-souq-orders",
@@ -22891,13 +22905,29 @@ function localizeOrder(order, locale) {
 function buildProductPrompt(product, locale) {
   return locale === "ar" ? `\u0623\u0631\u064A\u062F \u0645\u0639\u0631\u0641\u0629 \u062A\u0641\u0627\u0635\u064A\u0644 ${product.nameAr}` : `Tell me about the ${product.name}`;
 }
-function createChatMessage(role, text) {
+function createChatMessage(role, text, options = {}) {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     text,
-    sentAt: (/* @__PURE__ */ new Date()).toISOString()
+    sentAt: (/* @__PURE__ */ new Date()).toISOString(),
+    kind: options.kind ?? "standard",
+    retryable: Boolean(options.retryable),
+    retryText: options.retryText ?? "",
+    retryAfterMs: Number(options.retryAfterMs) || 0
   };
+}
+function buildClientErrorReply(text, error, responseStatus = 0) {
+  if (error?.name === "AbortError") {
+    return text.timeoutError;
+  }
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return text.offlineError;
+  }
+  if (responseStatus >= 500 || responseStatus === 0) {
+    return text.temporaryError;
+  }
+  return text.temporaryError;
 }
 function formatMessageTime(sentAt, locale) {
   if (!sentAt) {
@@ -22945,6 +22975,8 @@ function App() {
   const [analytics, setAnalytics] = (0, import_react.useState)(null);
   const [analyticsSummary, setAnalyticsSummary] = (0, import_react.useState)(null);
   const [showAnalytics, setShowAnalytics] = (0, import_react.useState)(false);
+  const [cooldownUntil, setCooldownUntil] = (0, import_react.useState)(0);
+  const [clockNow, setClockNow] = (0, import_react.useState)(() => Date.now());
   const inputRef = (0, import_react.useRef)(null);
   const autoOpenedRef = (0, import_react.useRef)(false);
   const content = localized[siteLocale];
@@ -22964,6 +22996,8 @@ function App() {
   const cartSubtotal = cartDetailedItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const cartTax = cartDetailedItems.reduce((sum, item) => sum + (item.product.taxSar ?? 0) * item.quantity, 0);
   const cartTotal = cartSubtotal;
+  const cooldownRemainingMs = Math.max(0, cooldownUntil - clockNow);
+  const composerLocked = loading || cooldownRemainingMs > 0;
   (0, import_react.useEffect)(() => {
     const intervalId = window.setInterval(() => {
       setHeroIndex((current) => (current + 1) % localized.en.heroSlides.length);
@@ -23056,6 +23090,18 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, [toastNotice]);
   (0, import_react.useEffect)(() => {
+    if (cooldownUntil <= Date.now()) {
+      if (cooldownUntil !== 0) {
+        setClockNow(Date.now());
+      }
+      return void 0;
+    }
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 200);
+    return () => window.clearInterval(intervalId);
+  }, [cooldownUntil]);
+  (0, import_react.useEffect)(() => {
     const shouldLockScroll = cartOpen || selectedProductId !== null || showAnalytics || widgetOpen && window.matchMedia("(max-width: 920px)").matches;
     if (!shouldLockScroll) {
       return void 0;
@@ -23079,23 +23125,37 @@ function App() {
       message
     });
   }
-  async function sendMessage(nextMessage) {
-    if (!nextMessage.trim()) {
+  async function sendMessage(nextMessage, options = {}) {
+    const { repeatUserBubble = true } = options;
+    const trimmedMessage = nextMessage.trim();
+    if (!trimmedMessage || loading) {
+      return;
+    }
+    const currentTime = Date.now();
+    if (currentTime < cooldownUntil) {
+      setClockNow(currentTime);
       return;
     }
     setLoading(true);
-    const userEntry = createChatMessage("user", nextMessage);
-    setMessages((current) => [...current, userEntry]);
+    setCooldownUntil(currentTime + MESSAGE_COOLDOWN_MS);
+    setClockNow(currentTime);
+    if (repeatUserBubble) {
+      const userEntry = createChatMessage("user", trimmedMessage);
+      setMessages((current) => [...current, userEntry]);
+    }
     setDraft("");
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
+        signal: controller.signal,
         body: JSON.stringify({
           sessionId,
-          message: nextMessage,
+          message: trimmedMessage,
           preferredLocale: siteLocale,
           customerProfile: customerProfile.submitted ? {
             name: customerProfile.name,
@@ -23106,13 +23166,46 @@ function App() {
           } : null
         })
       });
-      const data = await response.json();
-      setSessionId(data.sessionId);
+      const data = await response.json().catch(() => ({}));
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
+      if (!response.ok) {
+        const inlineReply = typeof data.reply === "string" && data.reply.trim() ? data.reply : buildClientErrorReply(content.widget, null, response.status);
+        const retryAfterMs = Number(data.meta?.retryAfterMs) || 0;
+        if (retryAfterMs > 0) {
+          setCooldownUntil(Date.now() + retryAfterMs);
+          setClockNow(Date.now());
+        }
+        setMessages((current) => [
+          ...current,
+          createChatMessage("bot", inlineReply, {
+            kind: "error",
+            retryable: true,
+            retryText: trimmedMessage,
+            retryAfterMs
+          })
+        ]);
+        return;
+      }
+      if (typeof data.reply !== "string" || !data.reply.trim()) {
+        throw new Error("Missing chat reply");
+      }
       setMessages((current) => [
         ...current,
         createChatMessage("bot", data.reply)
       ]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        createChatMessage("bot", buildClientErrorReply(content.widget, error), {
+          kind: "error",
+          retryable: true,
+          retryText: trimmedMessage
+        })
+      ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }
@@ -23465,6 +23558,7 @@ function App() {
       SupportWidget,
       {
         bootstrapData,
+        cooldownRemainingMs,
         draft,
         locale: siteLocale,
         loading,
@@ -23474,6 +23568,7 @@ function App() {
         onClose: () => setWidgetOpen(false),
         onPrimePrompt: primeSupportPrompt,
         onProfileSubmit: submitLeadProfile,
+        onRetryMessage: (message) => sendMessage(message, { repeatUserBubble: false }),
         onResetConversation: resetConversation,
         onSend: sendMessage,
         onSetView: setWidgetView,
@@ -24074,6 +24169,7 @@ function ProductDetailsModal({ content, locale, onAddToCart, onAsk, onClose, pro
 }
 function SupportWidget({
   bootstrapData,
+  cooldownRemainingMs,
   customerProfile,
   draft,
   inputRef,
@@ -24084,6 +24180,7 @@ function SupportWidget({
   onClose,
   onPrimePrompt,
   onProfileSubmit,
+  onRetryMessage,
   onSend,
   onSetView,
   onResetConversation,
@@ -24142,6 +24239,9 @@ function SupportWidget({
     onPrimePrompt(prompt);
   }
   const capabilityPills = locale === "ar" ? ["\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u0634\u0631\u0627\u0621", "\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A", "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0633\u064A\u0627\u0633\u0627\u062A", "\u062A\u062D\u0648\u064A\u0644 \u0644\u0644\u0628\u0634\u0631"] : ["Buying advice", "Order tracking", "Returns & policies", "Human handoff"];
+  const composerNotice = loading ? text.sendingLocked : cooldownRemainingMs > 0 ? fillTemplate(text.cooldownNotice, {
+    seconds: Math.max(1, Math.ceil(cooldownRemainingMs / 1e3))
+  }) : "";
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "aside",
     {
@@ -24367,8 +24467,18 @@ function SupportWidget({
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
-              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, dir: "auto", children: [
+              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role} ${message.kind === "error" ? "message-error" : ""}`, dir: "auto", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
+                message.retryable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "message-retry",
+                    onClick: () => onRetryMessage(message.retryText),
+                    disabled: loading || cooldownRemainingMs > 0,
+                    children: text.retry
+                  }
+                ) }) : null,
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-meta", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-time", children: formatMessageTime(message.sentAt, locale) }) })
               ] }) }, message.id)),
               loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-row bot typing-row", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-bubble bot typing-bubble", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "typing-dots", "aria-label": text.typing, children: [
@@ -24387,6 +24497,7 @@ function SupportWidget({
                 onSend(draft);
               },
               children: [
+                composerNotice ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "composer-notice", children: composerNotice }) : null,
                 showEmojiPicker ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "emoji-picker", children: emojiChoices.map((emoji) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                   "button",
                   {
@@ -24407,6 +24518,7 @@ function SupportWidget({
                     className: `send-button ${draft.trim() ? "ready" : ""}`,
                     type: "submit",
                     "aria-label": localizeText(locale, "Send message", "\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629"),
+                    disabled: loading || cooldownRemainingMs > 0 || !draft.trim(),
                     children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SendIcon, {})
                   }
                 ),

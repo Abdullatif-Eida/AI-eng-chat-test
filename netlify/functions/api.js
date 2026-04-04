@@ -3,13 +3,25 @@ import { createCommerceProviderFromEnv } from "../../src/lib/commerceProvider.js
 import { integrationMap } from "../../src/integrations/index.js";
 import { createOrder, listOrders } from "../../src/data/orders.js";
 import { products } from "../../src/data/products.js";
+import {
+  createSessionRetentionStore,
+  readSessionRetentionValue,
+  writeSessionRetentionValue
+} from "../../src/lib/sessionRetention.js";
 
 const chatbot = createChatbot({
-  commerceProvider: createCommerceProviderFromEnv()
+  commerceProvider: createCommerceProviderFromEnv(),
+  messageCooldownMs: Number(process.env.MESSAGE_COOLDOWN_MS || 1500)
 });
 const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
 const allowRequestScopedOpenRouterKey = process.env.ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE === "true";
 const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
+const trustedSessionOrders = createSessionRetentionStore(null, {
+  maxEntries: Number(process.env.MAX_TRUSTED_ORDER_SESSIONS || 256)
+});
+const trustedSessionOrdersTtlMs = Number(process.env.TRUSTED_ORDER_SESSION_TTL_MS || 30 * 60 * 1000);
+const maxTrustedOrdersPerSession = Number(process.env.MAX_TRUSTED_ORDERS_PER_SESSION || 20);
+const sessionIdPattern = /^[a-z0-9._:-]{8,120}$/i;
 
 function json(statusCode, payload) {
   return {
@@ -41,8 +53,29 @@ function parseBody(body) {
   try {
     return JSON.parse(body);
   } catch {
-    return {};
+    throw new Error("Request body must be valid JSON.");
   }
+}
+
+function normalizeSessionId(value) {
+  const trimmed = String(value ?? "").trim();
+  return sessionIdPattern.test(trimmed) ? trimmed : crypto.randomUUID();
+}
+
+function readTrustedOrdersForSession(sessionId) {
+  return readSessionRetentionValue(trustedSessionOrders, sessionId) ?? [];
+}
+
+function rememberTrustedOrder(sessionId, order) {
+  const existingOrders = readTrustedOrdersForSession(sessionId);
+  const dedupedOrders = [
+    order,
+    ...existingOrders.filter((entry) => entry?.orderNumber !== order?.orderNumber)
+  ].slice(0, maxTrustedOrdersPerSession);
+
+  writeSessionRetentionValue(trustedSessionOrders, sessionId, dedupedOrders, {
+    ttlMs: trustedSessionOrdersTtlMs
+  });
 }
 
 function normalizePath(event) {
@@ -123,13 +156,13 @@ export async function handler(event) {
 
     if (method === "POST" && path === "/chat") {
       const parsed = parseBody(event.body);
-      const sessionId = parsed.sessionId || crypto.randomUUID();
+      const sessionId = normalizeSessionId(parsed.sessionId);
       const result = await chatbot.chat({
         sessionId,
         message: parsed.message ?? "",
         preferredLocale: normalizeLocale(parsed.preferredLocale),
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
+        knownOrders: readTrustedOrdersForSession(sessionId),
         openrouterApiKey: allowRequestScopedOpenRouterKey
           ? event.headers?.["x-openrouter-key"] ??
             event.headers?.["X-OpenRouter-Key"] ??
@@ -138,7 +171,7 @@ export async function handler(event) {
           : null
       });
 
-      return json(200, {
+      return json(Number(result.statusCode) || 200, {
         sessionId,
         ...result
       });
@@ -146,14 +179,19 @@ export async function handler(event) {
 
     if (method === "POST" && path === "/orders") {
       const parsed = parseBody(event.body);
+      const sessionId = normalizeSessionId(parsed.sessionId);
       const order = createOrder({
         customerName: parsed.customerName,
         email: parsed.email,
+        phone: parsed.phone,
+        customerNumber: parsed.customerNumber,
         items: parsed.items ?? [],
         locale: normalizeLocale(parsed.locale)
       });
+      rememberTrustedOrder(sessionId, order);
 
       return json(201, {
+        sessionId,
         order
       });
     }
@@ -161,10 +199,17 @@ export async function handler(event) {
     return json(404, { error: "Not found" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown server error";
-    const statusCode = message === "Request body too large" ? 413 : 500;
+    const statusCode =
+      message === "Request body too large"
+        ? 413
+        : message === "Request body must be valid JSON."
+          ? 400
+          : 500;
     return json(statusCode, {
       error:
-        statusCode === 413
+        statusCode === 400
+          ? message
+          : statusCode === 413
           ? "Request body too large."
           : "Internal server error."
     });

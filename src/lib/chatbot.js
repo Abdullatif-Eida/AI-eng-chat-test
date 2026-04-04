@@ -11,6 +11,7 @@ import {
 } from "./sessionRetention.js";
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
+const MESSAGE_COOLDOWN_MS = 1500;
 const MAX_HISTORY_ENTRIES = 16;
 const MAX_ANALYTICS_EVENTS = 200;
 const MAX_MESSAGE_CHARS = 4000;
@@ -83,6 +84,8 @@ function createSessionState(now) {
     sharingBoundary: createDataProtectionBoundary(),
     cacheStore: createSessionRetentionStore(null, { maxEntries: MAX_CACHE_ENTRIES }),
     idempotencyStore: createSessionRetentionStore(null, { maxEntries: MAX_IDEMPOTENCY_ENTRIES }),
+    pendingTurn: null,
+    lastAcceptedMessageAt: 0,
     createdAt: now,
     lastSensitiveResetAt: now,
     lastSeenAt: now
@@ -202,6 +205,74 @@ function buildFallbackReply(locale = "en") {
     : "I can help with products, orders, returns, payments, and policies. If you already have a product name or order number, start with that and we’ll go from there.";
 }
 
+function buildRateLimitedReply(locale = "en", retryAfterMs = MESSAGE_COOLDOWN_MS) {
+  const retryAfterSeconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+
+  return locale === "ar"
+    ? {
+        reply: `أرسلنا رسالتك السابقة قبل لحظة. انتظر ${retryAfterSeconds} ${retryAfterSeconds === 1 ? "ثانية" : "ثوانٍ"} ثم أرسل الرسالة التالية.`,
+        intent: "clarification",
+        confidence: 0.55,
+        structured: {
+          intent: "clarification",
+          resolution: "clarification_needed",
+          handoffRecommended: false,
+          customerAction: "انتظر قليلاً ثم أعد الإرسال."
+        },
+        meta: {
+          reason: "cooldown",
+          retryAfterMs
+        }
+      }
+    : {
+        reply: `I just received your last message. Please wait ${retryAfterSeconds} second${retryAfterSeconds === 1 ? "" : "s"} before sending the next one.`,
+        intent: "clarification",
+        confidence: 0.55,
+        structured: {
+          intent: "clarification",
+          resolution: "clarification_needed",
+          handoffRecommended: false,
+          customerAction: "Wait a moment, then send the next message."
+        },
+        meta: {
+          reason: "cooldown",
+          retryAfterMs
+        }
+      };
+}
+
+function buildPendingTurnReply(locale = "en") {
+  return locale === "ar"
+    ? {
+        reply: "ما زلت أعمل على رسالتك السابقة. انتظر حتى يصل الرد ثم أرسل رسالة جديدة، أو أعد محاولة نفس الرسالة إذا انقطع الرد.",
+        intent: "clarification",
+        confidence: 0.45,
+        structured: {
+          intent: "clarification",
+          resolution: "clarification_needed",
+          handoffRecommended: false,
+          customerAction: "انتظر الرد الحالي أو أعد محاولة نفس الرسالة."
+        },
+        meta: {
+          reason: "pending_turn"
+        }
+      }
+    : {
+        reply: "I’m still working on your previous message. Wait for that reply before sending a new one, or retry the same message if the response was lost.",
+        intent: "clarification",
+        confidence: 0.45,
+        structured: {
+          intent: "clarification",
+          resolution: "clarification_needed",
+          handoffRecommended: false,
+          customerAction: "Wait for the current reply or retry the same message."
+        },
+        meta: {
+          reason: "pending_turn"
+        }
+      };
+}
+
 function classifyJourney(intent = "") {
   switch (intent) {
     case "catalog_browse":
@@ -284,7 +355,12 @@ function buildAnalyticsSummary(events = []) {
   return summary;
 }
 
-export function createChatbot({ commerceProvider, now = () => Date.now(), sessionTtlMs = SESSION_TTL_MS } = {}) {
+export function createChatbot({
+  commerceProvider,
+  now = () => Date.now(),
+  sessionTtlMs = SESSION_TTL_MS,
+  messageCooldownMs = 0
+} = {}) {
   const sessions = new Map();
   const analytics = [];
   const agent = createSupportAgent({
@@ -331,6 +407,7 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
     const session = getSession(sessionId);
     const trimmedMessage = sanitizeMessage(message);
     const locale = resolveReplyLocale(trimmedMessage, preferredLocale, session);
+    const currentTime = now();
     session.lastLocale = locale;
 
     const safeCustomerProfile = sanitizeCustomerProfile(customerProfile);
@@ -357,6 +434,7 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
 
     if (!trimmedMessage) {
       return {
+        statusCode: 200,
         locale,
         reply: buildFallbackReply(locale),
         intent: "fallback",
@@ -364,59 +442,125 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
       };
     }
 
-    const priorHistory = session.history.slice(-8);
-    const result = await agent.respond({
-      sessionId,
-      locale,
-      storefrontLocale: preferredLocale ?? locale,
-      message: trimmedMessage,
-      history: priorHistory,
-      customer: session.customer,
-      knownOrders,
-      sharingBoundary: session.sharingBoundary,
-      cacheStore: session.cacheStore,
-      idempotencyStore: session.idempotencyStore,
-      openrouterApiKey,
-      commerceProvider
-    });
-
-    session.history.push(
-      {
-        role: "user",
-        content: tokenizeText(trimmedMessage, session.sharingBoundary)
-      },
-      {
-        role: "assistant",
-        content: tokenizeText(result.reply, session.sharingBoundary)
+    if (session.pendingTurn) {
+      if (session.pendingTurn.message === trimmedMessage) {
+        return session.pendingTurn.promise;
       }
-    );
-    session.history = session.history.slice(-MAX_HISTORY_ENTRIES);
 
-    analytics.push({
-      type: "chat_turn",
-      ...sanitizeAnalyticsEvent({ sessionId }),
-      locale,
-      intent: result.intent,
-      journey: classifyJourney(result.intent),
-      model: result.model ?? agent.getStatus().model,
-      provider: agent.getStatus().provider,
-      confidence: result.confidence,
-      contained: isContainedTurn(result),
-      handoffRecommended: Boolean(result.structured?.handoffRecommended),
-      degraded: Boolean(result.degraded),
-      timestamp: new Date().toISOString()
-    });
-    if (analytics.length > MAX_ANALYTICS_EVENTS) {
-      analytics.splice(0, analytics.length - MAX_ANALYTICS_EVENTS);
+      analytics.push({
+        type: "chat_turn_rejected",
+        ...sanitizeAnalyticsEvent({ sessionId }),
+        locale,
+        reason: "pending_turn",
+        timestamp: new Date().toISOString()
+      });
+      if (analytics.length > MAX_ANALYTICS_EVENTS) {
+        analytics.splice(0, analytics.length - MAX_ANALYTICS_EVENTS);
+      }
+
+      return {
+        statusCode: 409,
+        locale,
+        ...buildPendingTurnReply(locale)
+      };
     }
 
-    return {
-      locale,
-      reply: result.reply,
-      intent: result.intent,
-      confidence: result.confidence,
-      structured: result.structured ?? null
+    if (
+      session.lastAcceptedMessageAt &&
+      currentTime - session.lastAcceptedMessageAt < messageCooldownMs
+    ) {
+      const retryAfterMs = Math.max(1, messageCooldownMs - (currentTime - session.lastAcceptedMessageAt));
+      analytics.push({
+        type: "chat_turn_rejected",
+        ...sanitizeAnalyticsEvent({ sessionId }),
+        locale,
+        reason: "cooldown",
+        retryAfterMs,
+        timestamp: new Date().toISOString()
+      });
+      if (analytics.length > MAX_ANALYTICS_EVENTS) {
+        analytics.splice(0, analytics.length - MAX_ANALYTICS_EVENTS);
+      }
+
+      return {
+        statusCode: 429,
+        locale,
+        ...buildRateLimitedReply(locale, retryAfterMs)
+      };
+    }
+
+    session.lastAcceptedMessageAt = currentTime;
+
+    const turnPromise = (async () => {
+      const priorHistory = session.history.slice(-8);
+      const result = await agent.respond({
+        sessionId,
+        locale,
+        storefrontLocale: preferredLocale ?? locale,
+        message: trimmedMessage,
+        history: priorHistory,
+        customer: session.customer,
+        knownOrders,
+        sharingBoundary: session.sharingBoundary,
+        cacheStore: session.cacheStore,
+        idempotencyStore: session.idempotencyStore,
+        openrouterApiKey,
+        commerceProvider
+      });
+
+      session.history.push(
+        {
+          role: "user",
+          content: tokenizeText(trimmedMessage, session.sharingBoundary)
+        },
+        {
+          role: "assistant",
+          content: tokenizeText(result.reply, session.sharingBoundary)
+        }
+      );
+      session.history = session.history.slice(-MAX_HISTORY_ENTRIES);
+
+      analytics.push({
+        type: "chat_turn",
+        ...sanitizeAnalyticsEvent({ sessionId }),
+        locale,
+        intent: result.intent,
+        journey: classifyJourney(result.intent),
+        model: result.model ?? agent.getStatus().model,
+        provider: agent.getStatus().provider,
+        confidence: result.confidence,
+        contained: isContainedTurn(result),
+        handoffRecommended: Boolean(result.structured?.handoffRecommended),
+        degraded: Boolean(result.degraded),
+        timestamp: new Date().toISOString()
+      });
+      if (analytics.length > MAX_ANALYTICS_EVENTS) {
+        analytics.splice(0, analytics.length - MAX_ANALYTICS_EVENTS);
+      }
+
+      return {
+        statusCode: Number(result.statusCode) || 200,
+        locale,
+        reply: result.reply,
+        intent: result.intent,
+        confidence: result.confidence,
+        structured: result.structured ?? null,
+        meta: result.meta ?? null
+      };
+    })();
+
+    session.pendingTurn = {
+      message: trimmedMessage,
+      promise: turnPromise
     };
+
+    try {
+      return await turnPromise;
+    } finally {
+      if (session.pendingTurn?.promise === turnPromise) {
+        session.pendingTurn = null;
+      }
+    }
   }
 
   return {

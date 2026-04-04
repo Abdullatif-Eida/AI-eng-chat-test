@@ -208,6 +208,12 @@ const localized = {
       poweredBrand: "AI SUPPORT",
       meta: "Intent coverage: product info, tracking, returns, handoff",
       typing: "Typing…",
+      retry: "Retry",
+      sendingLocked: "Please wait for the current reply before sending another message.",
+      cooldownNotice: "Please wait {seconds}s before sending the next message.",
+      timeoutError: "That reply took too long. Tap retry to send the same message again.",
+      temporaryError: "I hit a temporary issue while sending that message. Tap retry to try the same request again.",
+      offlineError: "You appear to be offline. Reconnect and tap retry to send the same message again.",
       afterIntro: "Thanks {name}. I’ve saved your details and I’m ready to help. What would you like to do first?",
       orderCreatedFollowUp:
         "Your order {orderNumber} has been created. I can track it for you, explain the status, or check the shopper profile saved for this session."
@@ -415,6 +421,12 @@ const localized = {
       poweredBrand: "AI SUPPORT",
       meta: "نطاق الخدمة: منتجات، تتبع، إرجاع، تصعيد",
       typing: "جاري الكتابة…",
+      retry: "إعادة المحاولة",
+      sendingLocked: "يرجى انتظار الرد الحالي قبل إرسال رسالة جديدة.",
+      cooldownNotice: "يرجى الانتظار {seconds} ث قبل إرسال الرسالة التالية.",
+      timeoutError: "استغرق الرد وقتاً أطول من المتوقع. اضغط إعادة المحاولة لإرسال نفس الرسالة مرة أخرى.",
+      temporaryError: "واجهنا مشكلة مؤقتة أثناء إرسال الرسالة. اضغط إعادة المحاولة لتجربة نفس الطلب مرة أخرى.",
+      offlineError: "يبدو أنك غير متصل بالإنترنت. أعد الاتصال ثم اضغط إعادة المحاولة لإرسال نفس الرسالة مرة أخرى.",
       afterIntro: "شكرًا {name}. حفظت بياناتك وأنا جاهز للمساعدة. ما الذي تريد البدء به؟",
       orderCreatedFollowUp:
         "تم إنشاء طلبك {orderNumber}. أقدر أتابع حالته لك، أشرح وضع الشحن، أو أراجع ملف العميل المحفوظ في هذه الجلسة."
@@ -471,6 +483,9 @@ const STORAGE_KEYS = {
   queuedPrompt: "lean-souq-session-queued-prompt",
   checkoutNotice: "lean-souq-session-checkout-notice"
 };
+
+const CHAT_REQUEST_TIMEOUT_MS = 20000;
+const MESSAGE_COOLDOWN_MS = 1500;
 
 const LEGACY_STORAGE_KEYS = {
   cart: "lean-souq-cart",
@@ -764,13 +779,33 @@ function buildProductPrompt(product, locale) {
   return locale === "ar" ? `أريد معرفة تفاصيل ${product.nameAr}` : `Tell me about the ${product.name}`;
 }
 
-function createChatMessage(role, text) {
+function createChatMessage(role, text, options = {}) {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     role,
     text,
-    sentAt: new Date().toISOString()
+    sentAt: new Date().toISOString(),
+    kind: options.kind ?? "standard",
+    retryable: Boolean(options.retryable),
+    retryText: options.retryText ?? "",
+    retryAfterMs: Number(options.retryAfterMs) || 0
   };
+}
+
+function buildClientErrorReply(text, error, responseStatus = 0) {
+  if (error?.name === "AbortError") {
+    return text.timeoutError;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return text.offlineError;
+  }
+
+  if (responseStatus >= 500 || responseStatus === 0) {
+    return text.temporaryError;
+  }
+
+  return text.temporaryError;
 }
 
 function formatMessageTime(sentAt, locale) {
@@ -822,6 +857,8 @@ function App() {
   const [analytics, setAnalytics] = useState(null);
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const inputRef = useRef(null);
   const autoOpenedRef = useRef(false);
   const content = localized[siteLocale];
@@ -847,6 +884,8 @@ function App() {
   const cartSubtotal = cartDetailedItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const cartTax = cartDetailedItems.reduce((sum, item) => sum + (item.product.taxSar ?? 0) * item.quantity, 0);
   const cartTotal = cartSubtotal;
+  const cooldownRemainingMs = Math.max(0, cooldownUntil - clockNow);
+  const composerLocked = loading || cooldownRemainingMs > 0;
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -968,6 +1007,21 @@ function App() {
   }, [toastNotice]);
 
   useEffect(() => {
+    if (cooldownUntil <= Date.now()) {
+      if (cooldownUntil !== 0) {
+        setClockNow(Date.now());
+      }
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 200);
+
+    return () => window.clearInterval(intervalId);
+  }, [cooldownUntil]);
+
+  useEffect(() => {
     const shouldLockScroll =
       cartOpen ||
       selectedProductId !== null ||
@@ -1002,15 +1056,29 @@ function App() {
     });
   }
 
-  async function sendMessage(nextMessage) {
-    if (!nextMessage.trim()) {
+  async function sendMessage(nextMessage, options = {}) {
+    const { repeatUserBubble = true } = options;
+    const trimmedMessage = nextMessage.trim();
+    if (!trimmedMessage || loading) {
+      return;
+    }
+
+    const currentTime = Date.now();
+    if (currentTime < cooldownUntil) {
+      setClockNow(currentTime);
       return;
     }
 
     setLoading(true);
-    const userEntry = createChatMessage("user", nextMessage);
-    setMessages((current) => [...current, userEntry]);
+    setCooldownUntil(currentTime + MESSAGE_COOLDOWN_MS);
+    setClockNow(currentTime);
+    if (repeatUserBubble) {
+      const userEntry = createChatMessage("user", trimmedMessage);
+      setMessages((current) => [...current, userEntry]);
+    }
     setDraft("");
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), CHAT_REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch("/api/chat", {
@@ -1018,9 +1086,10 @@ function App() {
         headers: {
           "Content-Type": "application/json"
         },
+        signal: controller.signal,
         body: JSON.stringify({
           sessionId,
-          message: nextMessage,
+          message: trimmedMessage,
           preferredLocale: siteLocale,
           customerProfile: customerProfile.submitted
             ? {
@@ -1034,13 +1103,52 @@ function App() {
         })
       });
 
-      const data = await response.json();
-      setSessionId(data.sessionId);
+      const data = await response.json().catch(() => ({}));
+
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
+
+      if (!response.ok) {
+        const inlineReply = typeof data.reply === "string" && data.reply.trim()
+          ? data.reply
+          : buildClientErrorReply(content.widget, null, response.status);
+        const retryAfterMs = Number(data.meta?.retryAfterMs) || 0;
+        if (retryAfterMs > 0) {
+          setCooldownUntil(Date.now() + retryAfterMs);
+          setClockNow(Date.now());
+        }
+        setMessages((current) => [
+          ...current,
+          createChatMessage("bot", inlineReply, {
+            kind: "error",
+            retryable: true,
+            retryText: trimmedMessage,
+            retryAfterMs
+          })
+        ]);
+        return;
+      }
+
+      if (typeof data.reply !== "string" || !data.reply.trim()) {
+        throw new Error("Missing chat reply");
+      }
+
       setMessages((current) => [
         ...current,
         createChatMessage("bot", data.reply)
       ]);
+    } catch (error) {
+      setMessages((current) => [
+        ...current,
+        createChatMessage("bot", buildClientErrorReply(content.widget, error), {
+          kind: "error",
+          retryable: true,
+          retryText: trimmedMessage
+        })
+      ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }
@@ -1475,6 +1583,7 @@ function App() {
 
       <SupportWidget
         bootstrapData={bootstrapData}
+        cooldownRemainingMs={cooldownRemainingMs}
         draft={draft}
         locale={siteLocale}
         loading={loading}
@@ -1484,6 +1593,7 @@ function App() {
         onClose={() => setWidgetOpen(false)}
         onPrimePrompt={primeSupportPrompt}
         onProfileSubmit={submitLeadProfile}
+        onRetryMessage={(message) => sendMessage(message, { repeatUserBubble: false })}
         onResetConversation={resetConversation}
         onSend={sendMessage}
         onSetView={setWidgetView}
@@ -2249,6 +2359,7 @@ function ProductDetailsModal({ content, locale, onAddToCart, onAsk, onClose, pro
 
 function SupportWidget({
   bootstrapData,
+  cooldownRemainingMs,
   customerProfile,
   draft,
   inputRef,
@@ -2259,6 +2370,7 @@ function SupportWidget({
   onClose,
   onPrimePrompt,
   onProfileSubmit,
+  onRetryMessage,
   onSend,
   onSetView,
   onResetConversation,
@@ -2327,6 +2439,13 @@ function SupportWidget({
   const capabilityPills = locale === "ar"
     ? ["اقتراحات شراء", "ربط الطلبات", "استرجاع وسياسات", "تحويل للبشر"]
     : ["Buying advice", "Order tracking", "Returns & policies", "Human handoff"];
+  const composerNotice = loading
+    ? text.sendingLocked
+    : cooldownRemainingMs > 0
+      ? fillTemplate(text.cooldownNotice, {
+          seconds: Math.max(1, Math.ceil(cooldownRemainingMs / 1000))
+        })
+      : "";
 
   return (
     <aside
@@ -2578,8 +2697,20 @@ function SupportWidget({
             <div className="message-list">
               {messages.map((message) => (
                 <article key={message.id} className={`message-row ${message.role}`}>
-                  <div className={`message-bubble ${message.role}`} dir="auto">
+                  <div className={`message-bubble ${message.role} ${message.kind === "error" ? "message-error" : ""}`} dir="auto">
                     <p>{message.text}</p>
+                    {message.retryable ? (
+                      <div className="message-actions">
+                        <button
+                          type="button"
+                          className="message-retry"
+                          onClick={() => onRetryMessage(message.retryText)}
+                          disabled={loading || cooldownRemainingMs > 0}
+                        >
+                          {text.retry}
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="message-meta">
                       <span className="message-time">{formatMessageTime(message.sentAt, locale)}</span>
                     </div>
@@ -2607,6 +2738,9 @@ function SupportWidget({
               onSend(draft);
             }}
           >
+            {composerNotice ? (
+              <div className="composer-notice">{composerNotice}</div>
+            ) : null}
             {showEmojiPicker ? (
               <div className="emoji-picker">
                 {emojiChoices.map((emoji) => (
@@ -2629,6 +2763,7 @@ function SupportWidget({
               className={`send-button ${draft.trim() ? "ready" : ""}`}
               type="submit"
               aria-label={localizeText(locale, "Send message", "إرسال الرسالة")}
+              disabled={loading || cooldownRemainingMs > 0 || !draft.trim()}
             >
               <SendIcon />
             </button>

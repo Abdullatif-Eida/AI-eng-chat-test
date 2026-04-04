@@ -22,7 +22,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, "..", "public");
 const chatbot = createChatbot({
-  commerceProvider: createCommerceProviderFromEnv()
+  commerceProvider: createCommerceProviderFromEnv(),
+  messageCooldownMs: Number(process.env.MESSAGE_COOLDOWN_MS || 1500)
 });
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
@@ -210,7 +211,7 @@ const server = http.createServer(async (request, response) => {
         openrouterApiKey: allowRequestScopedOpenRouterKey ? request.headers["x-openrouter-key"] : null
       });
 
-      sendJson(response, 200, {
+      sendJson(response, Number(result.statusCode) || 200, {
         sessionId,
         ...result
       });

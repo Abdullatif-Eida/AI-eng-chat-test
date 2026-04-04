@@ -1356,6 +1356,177 @@ test("returns a shopper-safe message when the OpenRouter path is rate limited", 
   }
 });
 
+test("answers travel recommendations from the local catalog even when OpenRouter is unavailable", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Upstream provider should not be used for deterministic catalog turns."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "travel-recommendations-local",
+      message: "Recommend the best product for travel"
+    });
+
+    assert.equal(result.intent, "recommendations");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(result.reply, /External SSD|Portable Power Bank|Bluetooth Speaker|USB-C Hub/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("uses local category browsing for broad catalog asks like electronics", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for category browsing."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "electronics-browse-local",
+      message: "i need electronics"
+    });
+
+    assert.equal(result.intent, "catalog_browse");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(result.reply, /Wireless Mouse|Mechanical Keyboard|Bluetooth Speaker|USB-C Hub/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("reuses the in-flight promise for the same message and blocks different ones until it completes", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  let releaseResponse;
+  let gateOpen = false;
+  const delegate = createMockOpenRouterFetch();
+  let fetchCalls = 0;
+  global.fetch = async (...args) => {
+    fetchCalls += 1;
+    if (!gateOpen) {
+      await new Promise((resolve) => {
+        releaseResponse = () => {
+          gateOpen = true;
+          resolve();
+        };
+      });
+    }
+
+    return delegate(...args);
+  };
+
+  try {
+    const bot = createChatbot({
+      messageCooldownMs: 10_000
+    });
+
+    const firstPromise = bot.chat({
+      sessionId: "pending-reuse",
+      message: "What can you help me with?"
+    });
+    const secondPromise = bot.chat({
+      sessionId: "pending-reuse",
+      message: "What can you help me with?"
+    });
+    const blockedTurn = await bot.chat({
+      sessionId: "pending-reuse",
+      message: "Where is my order?"
+    });
+
+    assert.equal(fetchCalls, 1);
+    assert.equal(blockedTurn.statusCode, 409);
+    assert.equal(blockedTurn.meta?.reason, "pending_turn");
+
+    releaseResponse();
+    const firstResult = await firstPromise;
+    const secondResult = await secondPromise;
+    assert.deepEqual(secondResult, firstResult);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("rate limits rapid follow-up messages in the same session", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  global.fetch = createMockOpenRouterFetch();
+
+  let currentTime = 1_000;
+
+  try {
+    const bot = createChatbot({
+      now: () => currentTime,
+      messageCooldownMs: 1_500
+    });
+
+    const first = await bot.chat({
+      sessionId: "cooldown-turns",
+      message: "What can you help me with?"
+    });
+    currentTime += 300;
+    const second = await bot.chat({
+      sessionId: "cooldown-turns",
+      message: "How do returns work?"
+    });
+
+    assert.equal(first.statusCode, 200);
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.meta?.reason, "cooldown");
+    assert.match(second.reply, /wait/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("accepts a request-scoped OpenRouter key override for trusted backend callers", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   delete process.env.OPENROUTER_API_KEY;
