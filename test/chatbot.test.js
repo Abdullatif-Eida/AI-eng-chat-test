@@ -804,7 +804,7 @@ test("retries with a fallback model when the first model is unavailable", async 
   }
 });
 
-test("uses gpt-5-mini for same-session follow-up turns by default", async () => {
+test("keeps gpt-5-nano for simple same-session follow-up turns", async () => {
   const previousKey = process.env.OPENAI_API_KEY;
   const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
   const previousDefaultModel = process.env.OPENAI_MODEL;
@@ -845,8 +845,7 @@ test("uses gpt-5-mini for same-session follow-up turns by default", async () => 
     assert.equal(first.intent, "product_information");
     assert.equal(second.intent, "product_information");
     assert.equal(requestedModels[0], "gpt-5-nano");
-    assert.ok(requestedModels.includes("gpt-5-mini"));
-    assert.ok(requestedModels.indexOf("gpt-5-nano") < requestedModels.indexOf("gpt-5-mini"));
+    assert.ok(requestedModels.every((model) => model === "gpt-5-nano"));
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENAI_API_KEY;
@@ -864,6 +863,243 @@ test("uses gpt-5-mini for same-session follow-up turns by default", async () => 
       delete process.env.OPENAI_MODEL;
     } else {
       process.env.OPENAI_MODEL = previousDefaultModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("falls back to gpt-5-nano when gpt-5-mini returns insufficient_quota", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousDefaultModel = process.env.OPENAI_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
+  process.env.OPENAI_MODEL = "gpt-5-mini";
+
+  const requestedModels = [];
+  const upstreamFetch = createMockOpenAIFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    requestedModels.push(body.model);
+
+    if (body.model === "gpt-5-mini") {
+      return createJsonResponse({
+        error: {
+          message: "You exceeded your current quota, please check your plan and billing details.",
+          type: "insufficient_quota",
+          code: "insufficient_quota"
+        }
+      }, 429);
+    }
+
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "quota-fallback",
+      message: "I need help finding a keyboard for travel and productivity.",
+      customerProfile: {
+        name: "Abdullatif Eida",
+        email: "test@example.com"
+      },
+      knownOrders: [{ id: "order_1" }]
+    });
+
+    assert.equal(result.intent, "product_information");
+    assert.ok(requestedModels.includes("gpt-5-mini"));
+    assert.ok(requestedModels.includes("gpt-5-nano"));
+    assert.ok(requestedModels.indexOf("gpt-5-mini") < requestedModels.indexOf("gpt-5-nano"));
+
+    const analytics = bot.getAnalytics();
+    assert.ok(analytics.some((event) => event.type === "model_fallback_retry" && event.fromModel === "gpt-5-mini"));
+    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered" && event.toModel === "gpt-5-nano"));
+    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-5-nano"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+    }
+
+    if (previousDefaultModel === undefined) {
+      delete process.env.OPENAI_MODEL;
+    } else {
+      process.env.OPENAI_MODEL = previousDefaultModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("returns a specific shopper-safe quota message when all model attempts hit insufficient_quota", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousDefaultModel = process.env.OPENAI_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
+  process.env.OPENAI_MODEL = "gpt-5-mini";
+
+  global.fetch = async () =>
+    createJsonResponse({
+      error: {
+        message: "You exceeded your current quota, please check your plan and billing details.",
+        type: "insufficient_quota",
+        code: "insufficient_quota"
+      }
+    }, 429);
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "quota-message",
+      message: "how are you"
+    });
+
+    assert.equal(result.intent, "fallback");
+    assert.match(result.reply, /out of OpenAI quota/i);
+    assert.match(result.structured?.customerAction ?? "", /billing|quota/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+    }
+
+    if (previousDefaultModel === undefined) {
+      delete process.env.OPENAI_MODEL;
+    } else {
+      process.env.OPENAI_MODEL = previousDefaultModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("returns a specific shopper-safe rate limit message when all model attempts hit rate limits", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousDefaultModel = process.env.OPENAI_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
+  process.env.OPENAI_MODEL = "gpt-5-mini";
+
+  global.fetch = async () =>
+    createJsonResponse({
+      error: {
+        message: "Rate limit reached for requests per min (RPM). Please try again in 20s.",
+        type: "rate_limit_error"
+      }
+    }, 429);
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "rate-limit-message",
+      message: "how are you"
+    });
+
+    assert.equal(result.intent, "fallback");
+    assert.match(result.reply, /rate limited/i);
+    assert.match(result.structured?.customerAction ?? "", /wait/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+    }
+
+    if (previousDefaultModel === undefined) {
+      delete process.env.OPENAI_MODEL;
+    } else {
+      process.env.OPENAI_MODEL = previousDefaultModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("omits reasoning on non-gpt-5 fallback models during quota recovery", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
+  delete process.env.OPENAI_MODEL;
+
+  const requestedModels = [];
+  const upstreamFetch = createMockOpenAIFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    requestedModels.push(body.model);
+
+    if (["gpt-5-nano", "gpt-5.4-nano", "gpt-5-mini"].includes(body.model)) {
+      return createJsonResponse({
+        error: {
+          message: "Rate limit reached. Please try again shortly.",
+          type: "rate_limit_error"
+        }
+      }, 429);
+    }
+
+    if (body.model === "gpt-4.1-mini") {
+      assert.equal(body.reasoning, undefined);
+    }
+
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "rpm-fallback",
+      message: "asdsa",
+      customerProfile: {
+        name: "Abdullatif Eida",
+        email: "test@example.com"
+      }
+    });
+
+    assert.notEqual(result.intent, "fallback");
+    assert.deepEqual(requestedModels.slice(0, 4), ["gpt-5-nano", "gpt-5.4-nano", "gpt-5-mini", "gpt-4.1-mini"]);
+
+    const analytics = bot.getAnalytics();
+    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered" && event.toModel === "gpt-4.1-mini"));
+    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-4.1-mini"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
     }
 
     global.fetch = previousFetch;

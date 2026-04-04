@@ -83,6 +83,79 @@ async function requestOpenAI({
   return response.json();
 }
 
+function buildReasoningPayload(model, reasoning) {
+  return /^gpt-5(?:$|[.-])/.test(String(model ?? "").trim()) ? reasoning : undefined;
+}
+
+function classifyOpenAIFailure(error, locale = "en") {
+  const haystack = error instanceof OpenAIRequestError
+    ? `${error.message}\n${error.responseText}`.toLowerCase()
+    : String(error?.message ?? "").toLowerCase();
+
+  if (haystack.includes("insufficient_quota") || haystack.includes("current quota") || haystack.includes("billing")) {
+    return locale === "ar"
+      ? {
+          reply: "خدمة الدعم الذكية متوقفة الآن لأن رصيد أو حصة OpenAI غير كافية على الخادم. حدّث الفوترة أو الحصة ثم أعد المحاولة.",
+          customerAction: "حدّث الفوترة أو الحصة في OpenAI ثم أعد المحاولة."
+        }
+      : {
+          reply: "The AI support service is out of OpenAI quota right now. Please update billing or quota settings and try again.",
+          customerAction: "Update OpenAI billing or quota settings, then try again."
+        };
+  }
+
+  if (haystack.includes("rate limit") || haystack.includes("requests per min") || haystack.includes("rpm")) {
+    return locale === "ar"
+      ? {
+          reply: "خدمة الدعم الذكية تتعرض حالياً لتحديد مؤقت في عدد الطلبات. انتظر قليلاً ثم أعد المحاولة.",
+          customerAction: "انتظر بضع ثوانٍ ثم أعد المحاولة."
+        }
+      : {
+          reply: "The AI support service is being rate limited right now. Please wait a few seconds and try again.",
+          customerAction: "Wait a few seconds, then try again."
+        };
+  }
+
+  if (
+    haystack.includes("invalid_api_key") ||
+    haystack.includes("incorrect api key") ||
+    haystack.includes("invalid api key") ||
+    haystack.includes("unauthorized")
+  ) {
+    return locale === "ar"
+      ? {
+          reply: "خدمة الدعم الذكية غير مهيأة بشكل صحيح الآن لأن مفتاح OpenAI على الخادم غير صالح.",
+          customerAction: "حدّث مفتاح OpenAI على الخادم ثم أعد المحاولة."
+        }
+      : {
+          reply: "The AI support service is misconfigured right now because the server OpenAI API key was rejected.",
+          customerAction: "Update the server OpenAI API key, then try again."
+        };
+  }
+
+  if (haystack.includes("model") && (haystack.includes("not found") || haystack.includes("not have access") || haystack.includes("does not exist"))) {
+    return locale === "ar"
+      ? {
+          reply: "خدمة الدعم الذكية غير مهيأة بشكل صحيح الآن لأن نموذج OpenAI المطلوب غير متاح لهذا المفتاح.",
+          customerAction: "تحقق من إعداد النموذج أو استخدم نموذجاً متاحاً ثم أعد المحاولة."
+        }
+      : {
+          reply: "The AI support service is misconfigured right now because the selected OpenAI model is unavailable for this API key.",
+          customerAction: "Check the configured model or switch to one this API key can use."
+        };
+  }
+
+  return locale === "ar"
+    ? {
+        reply: "أواجه مشكلة مؤقتة في خدمة الذكاء الاصطناعي الآن. حاول مرة أخرى بعد قليل أو اطلب تحويل الحالة إلى موظف دعم.",
+        customerAction: "أعد المحاولة بعد قليل أو اطلب التحويل إلى موظف دعم."
+      }
+    : {
+        reply: "I’m having a temporary problem reaching the AI support service right now. Please try again shortly or ask me to escalate this to a human agent.",
+        customerAction: "Try again shortly or ask for a human agent."
+      };
+}
+
 function sanitizeApiKey(rawValue) {
   const trimmed = String(rawValue ?? "").trim();
   if (!trimmed) {
@@ -119,7 +192,7 @@ function buildModelFallbackCandidates(model) {
     "gpt-5.4-mini": ["gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"],
     "gpt-5.4-nano": ["gpt-5-nano", "gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"],
     "gpt-5.4": ["gpt-5", "gpt-4.1", "gpt-4o"],
-    "gpt-5-mini": ["gpt-5.4-mini", "gpt-4.1-mini", "gpt-4o-mini"],
+    "gpt-5-mini": ["gpt-5-nano", "gpt-5.4-mini", "gpt-4.1-mini", "gpt-4o-mini"],
     "gpt-5-nano": ["gpt-5.4-nano", "gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini"],
     "gpt-5": ["gpt-5.4", "gpt-4.1", "gpt-4o"],
     "gpt-4.1-mini": ["gpt-4o-mini"],
@@ -147,11 +220,23 @@ function isRecoverableModelError(error) {
     return false;
   }
 
+  const haystack = `${error.message}\n${error.responseText}`.toLowerCase();
+
+  if (error.status === 429) {
+    return [
+      "insufficient_quota",
+      "quota",
+      "current quota",
+      "billing",
+      "rate limit",
+      "tier"
+    ].some((needle) => haystack.includes(needle));
+  }
+
   if (![400, 403, 404].includes(error.status)) {
     return false;
   }
 
-  const haystack = `${error.message}\n${error.responseText}`.toLowerCase();
   return [
     "model",
     "unsupported",
@@ -293,17 +378,21 @@ export function createSupportAgent({ track = () => {} } = {}) {
       effort: selectedModel === config.complexModel ? "medium" : "low"
     };
     let model = selectedModel;
-    const buildInitialBody = (model) => ({
-      model,
-      instructions,
-      input: buildExternalModelInput(history, message, sharingBoundary),
-      tools: toolbox.tools,
-      reasoning,
-      text,
-      truncation: "auto",
-      parallel_tool_calls: false,
-      store: true
-    });
+    const buildInitialBody = (model) => {
+      const reasoningPayload = buildReasoningPayload(model, reasoning);
+
+      return {
+        model,
+        instructions,
+        input: buildExternalModelInput(history, message, sharingBoundary),
+        tools: toolbox.tools,
+        ...(reasoningPayload ? { reasoning: reasoningPayload } : {}),
+        text,
+        truncation: "auto",
+        parallel_tool_calls: false,
+        store: true
+      };
+    };
 
     try {
       const initialResponse = await requestWithModelFallback({
@@ -370,6 +459,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
           });
         }
 
+        const reasoningPayload = buildReasoningPayload(model, reasoning);
         payload = await requestOpenAI({
           apiKey,
           body: {
@@ -378,7 +468,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
             previous_response_id: payload.id,
             input: toolOutputs,
             tools: toolbox.tools,
-            reasoning,
+            ...(reasoningPayload ? { reasoning: reasoningPayload } : {}),
             text,
             truncation: "auto",
             parallel_tool_calls: false,
@@ -389,6 +479,8 @@ export function createSupportAgent({ track = () => {} } = {}) {
 
       throw new Error("OpenAI tool loop exceeded the safety limit.");
     } catch (error) {
+      const failure = classifyOpenAIFailure(error, locale);
+
       track({
         type: "agent_fallback",
         sessionId,
@@ -398,10 +490,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
       });
 
       return {
-        reply:
-          locale === "ar"
-            ? "أواجه مشكلة مؤقتة في خدمة الذكاء الاصطناعي الآن. حاول مرة أخرى بعد قليل أو اطلب تحويل الحالة إلى موظف دعم."
-            : "I’m having a temporary problem reaching the AI support service right now. Please try again shortly or ask me to escalate this to a human agent.",
+        reply: failure.reply,
         intent: inferIntentFromTools(toolTrace),
         confidence: 0.15,
         model,
@@ -410,10 +499,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
           intent: inferIntentFromTools(toolTrace),
           resolution: "temporary_failure",
           handoffRecommended: true,
-          customerAction:
-            locale === "ar"
-              ? "أعد المحاولة بعد قليل أو اطلب التحويل إلى موظف دعم."
-              : "Try again shortly or ask for a human agent."
+          customerAction: failure.customerAction
         }
       };
     }

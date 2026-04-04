@@ -127,7 +127,7 @@ export function selectSupportModel({
     return config.complexModel;
   }
 
-  if (complexityScore <= 1 && trimmed.length <= 60 && history.length <= 1) {
+  if (complexityScore <= 1 && trimmed.length <= 80 && countWords(trimmed) <= 14 && history.length <= 4) {
     return config.cheapModel;
   }
 
