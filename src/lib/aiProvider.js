@@ -258,15 +258,24 @@ function buildAgentRequestBody({
   input,
   tools,
   useStructuredOutput,
-  requestOptions
+  requestOptions,
+  relaxedRouting = false
 }) {
+  const resolvedRequestOptions = relaxedRouting
+    ? {
+        ...requestOptions,
+        provider: undefined,
+        reasoning: undefined
+      }
+    : requestOptions;
+
   return {
     model,
     instructions,
     input,
     tools,
     ...(useStructuredOutput ? { text: buildSupportResponseFormat() } : {}),
-    ...requestOptions,
+    ...resolvedRequestOptions,
     store: false,
     truncation: "auto",
     parallel_tool_calls: false
@@ -294,6 +303,23 @@ function shouldRetryWithoutStructuredOutput(error) {
   ].some((needle) => haystack.includes(needle));
 }
 
+function shouldRetryWithRelaxedRouting(error) {
+  if (!(error instanceof OpenRouterRequestError)) {
+    return false;
+  }
+
+  if (![404, 422].includes(error.status)) {
+    return false;
+  }
+
+  const haystack = `${error.message}\n${error.responseText}`.toLowerCase();
+  return [
+    "no endpoints found",
+    "requested parameters",
+    "provider routing"
+  ].some((needle) => haystack.includes(needle));
+}
+
 async function requestAgentTurn({
   apiKey,
   model,
@@ -305,45 +331,85 @@ async function requestAgentTurn({
   sessionId,
   locale
 }) {
-  const preferredBody = buildAgentRequestBody({
-    model,
-    instructions,
-    input,
-    tools,
-    useStructuredOutput: true,
-    requestOptions
-  });
+  const attempts = [
+    {
+      useStructuredOutput: true,
+      relaxedRouting: false
+    }
+  ];
+  const attempted = new Set();
+  let lastError;
 
-  try {
-    return await requestOpenRouter({
-      apiKey,
-      body: preferredBody
-    });
-  } catch (error) {
-    if (!shouldRetryWithoutStructuredOutput(error)) {
+  while (attempts.length > 0) {
+    const attempt = attempts.shift();
+    const attemptKey = `${attempt.useStructuredOutput ? "schema" : "plain"}:${attempt.relaxedRouting ? "relaxed" : "strict"}`;
+
+    if (attempted.has(attemptKey)) {
+      continue;
+    }
+    attempted.add(attemptKey);
+
+    try {
+      return await requestOpenRouter({
+        apiKey,
+        body: buildAgentRequestBody({
+          model,
+          instructions,
+          input,
+          tools,
+          useStructuredOutput: attempt.useStructuredOutput,
+          requestOptions,
+          relaxedRouting: attempt.relaxedRouting
+        })
+      });
+    } catch (error) {
+      lastError = error;
+
+      if (shouldRetryWithRelaxedRouting(error) && !attempt.relaxedRouting) {
+        track({
+          type: "provider_routing_retry",
+          sessionId,
+          locale,
+          provider: "openrouter",
+          reason: error.message
+        });
+
+        attempts.unshift({
+          useStructuredOutput: attempt.useStructuredOutput,
+          relaxedRouting: true
+        });
+
+        if (attempt.useStructuredOutput) {
+          attempts.push({
+            useStructuredOutput: false,
+            relaxedRouting: true
+          });
+        }
+
+        continue;
+      }
+
+      if (shouldRetryWithoutStructuredOutput(error) && attempt.useStructuredOutput) {
+        track({
+          type: "structured_output_retry",
+          sessionId,
+          locale,
+          provider: "openrouter",
+          reason: error.message
+        });
+
+        attempts.unshift({
+          useStructuredOutput: false,
+          relaxedRouting: attempt.relaxedRouting
+        });
+        continue;
+      }
+
       throw error;
     }
-
-    track({
-      type: "structured_output_retry",
-      sessionId,
-      locale,
-      provider: "openrouter",
-      reason: error.message
-    });
-
-    return requestOpenRouter({
-      apiKey,
-      body: buildAgentRequestBody({
-        model,
-        instructions,
-        input,
-        tools,
-        useStructuredOutput: false,
-        requestOptions
-      })
-    });
   }
+
+  throw lastError;
 }
 
 function classifyProviderFailure(error, locale = "en") {

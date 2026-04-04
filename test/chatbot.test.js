@@ -1321,6 +1321,52 @@ test("retries without strict schema when a model rejects structured output", asy
   }
 });
 
+test("retries with relaxed provider routing when OpenRouter cannot satisfy strict routing constraints", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  const requestedBodies = [];
+  const upstreamFetch = createMockOpenRouterFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    requestedBodies.push(body);
+
+    if (body.provider?.require_parameters) {
+      return createJsonResponse({
+        error: {
+          message: "No endpoints found that can handle the requested parameters."
+        }
+      }, 404);
+    }
+
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "routing-retry",
+      message: "How do returns work?"
+    });
+
+    assert.equal(result.intent, "returns_refunds");
+    assert.equal(result.structured?.resolution, "order_number_required");
+    assert.equal(requestedBodies[0].provider?.require_parameters, true);
+    assert.equal(requestedBodies[1].provider, undefined);
+    assert.equal(requestedBodies[1].reasoning, undefined);
+    assert.ok(bot.getAnalytics().some((event) => event.type === "provider_routing_retry"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("returns a shopper-safe message when the OpenRouter path is rate limited", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
