@@ -718,6 +718,92 @@ test("returns a clear configuration error when the OpenAI key is missing", async
   }
 });
 
+test("sanitizes quoted and whitespace-padded OpenAI keys before sending requests", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = '  "test-key"  ';
+
+  const upstreamFetch = createMockOpenAIFetch();
+  global.fetch = async (url, options) => {
+    assert.equal(options.headers.Authorization, "Bearer test-key");
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "trimmed-key",
+      message: "Tell me about the Mechanical Keyboard"
+    });
+
+    assert.equal(result.intent, "product_information");
+    assert.match(result.reply, /Mechanical Keyboard/);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("retries with a fallback model when the first model is unavailable", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "broken-mini";
+
+  const requestedModels = [];
+  const upstreamFetch = createMockOpenAIFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    requestedModels.push(body.model);
+
+    if (body.model === "broken-mini") {
+      return createJsonResponse({
+        error: {
+          message: "The model `broken-mini` does not exist."
+        }
+      }, 404);
+    }
+
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "fallback-model",
+      message: "Tell me about the Mechanical Keyboard"
+    });
+
+    assert.equal(result.intent, "product_information");
+    assert.match(result.reply, /Mechanical Keyboard/);
+    assert.deepEqual(requestedModels.slice(0, 2), ["broken-mini", "gpt-5-mini"]);
+
+    const analytics = bot.getAnalytics();
+    assert.ok(analytics.some((event) => event.type === "model_fallback_recovered"));
+    assert.ok(analytics.some((event) => event.type === "chat_turn" && event.model === "gpt-5-mini"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("accepts a request-scoped OpenAI key override for trusted backend callers", async () => {
   const previousKey = process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_API_KEY;
