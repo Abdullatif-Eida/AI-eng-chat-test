@@ -22381,6 +22381,8 @@ var localized = {
       introTitle: "Please introduce yourself",
       namePlaceholder: "Enter your name",
       emailPlaceholder: "Enter your email",
+      phonePlaceholder: "Enter your phone number",
+      customerNumberPlaceholder: "Enter your customer number",
       newsletter: "Sign up for our newsletter",
       introSend: "Send",
       skipIntro: "Skip for now",
@@ -22583,6 +22585,8 @@ var localized = {
       introTitle: "\u0639\u0631\u0651\u0641\u0646\u0627 \u0628\u0646\u0641\u0633\u0643",
       namePlaceholder: "\u0623\u062F\u062E\u0644 \u0627\u0633\u0645\u0643",
       emailPlaceholder: "\u0623\u062F\u062E\u0644 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A",
+      phonePlaceholder: "\u0623\u062F\u062E\u0644 \u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644",
+      customerNumberPlaceholder: "\u0623\u062F\u062E\u0644 \u0631\u0642\u0645 \u0627\u0644\u0639\u0645\u064A\u0644",
       newsletter: "\u0633\u062C\u0644 \u0641\u064A \u0627\u0644\u0646\u0634\u0631\u0629 \u0627\u0644\u0628\u0631\u064A\u062F\u064A\u0629",
       introSend: "\u0625\u0631\u0633\u0627\u0644",
       skipIntro: "\u062A\u062E\u0637\u064A \u0627\u0644\u0622\u0646",
@@ -22649,10 +22653,64 @@ var orderStatusMap = {
   }
 };
 var STORAGE_KEYS = {
+  cart: "lean-souq-session-cart",
+  orders: "lean-souq-session-orders",
+  profile: "lean-souq-session-profile",
+  messages: "lean-souq-session-messages",
+  sessionId: "lean-souq-session-id",
+  locale: "lean-souq-session-locale",
+  widgetOpen: "lean-souq-session-widget-open",
+  widgetView: "lean-souq-session-widget-view",
+  draft: "lean-souq-session-draft",
+  queuedPrompt: "lean-souq-session-queued-prompt",
+  checkoutNotice: "lean-souq-session-checkout-notice"
+};
+var LEGACY_STORAGE_KEYS = {
   cart: "lean-souq-cart",
   orders: "lean-souq-orders",
   profile: "lean-souq-profile"
 };
+var LEGACY_STORAGE_BY_NEW_KEY = {
+  [STORAGE_KEYS.cart]: LEGACY_STORAGE_KEYS.cart,
+  [STORAGE_KEYS.orders]: LEGACY_STORAGE_KEYS.orders,
+  [STORAGE_KEYS.profile]: LEGACY_STORAGE_KEYS.profile
+};
+var memorySessionStorage = /* @__PURE__ */ new Map();
+function normalizeEmail(value = "") {
+  return String(value ?? "").trim().toLowerCase();
+}
+function normalizePhone(value = "") {
+  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+function normalizeCustomerNumber(value = "") {
+  return String(value ?? "").trim().toUpperCase().replace(/\s+/g, "-").slice(0, 64);
+}
+function getSessionStorageHandle() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+function getLegacyStorageHandle() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+function readFromMemoryStorage(key) {
+  return memorySessionStorage.has(key) ? memorySessionStorage.get(key) : null;
+}
+function writeToMemoryStorage(key, value) {
+  memorySessionStorage.set(key, value);
+}
 function parseRoute(pathname) {
   const normalizedPath = pathname && pathname !== "/" ? pathname.replace(/\/+$/, "") : "/";
   const orderMatch = normalizedPath.match(/^\/orders\/([^/]+)$/);
@@ -22674,24 +22732,60 @@ function parseRoute(pathname) {
   };
 }
 function readStorage(key, fallback) {
-  if (typeof window === "undefined") {
-    return fallback;
+  const sessionStorageHandle = getSessionStorageHandle();
+  const rawValue = sessionStorageHandle ? sessionStorageHandle.getItem(key) : readFromMemoryStorage(key);
+  if (rawValue) {
+    try {
+      return JSON.parse(rawValue);
+    } catch {
+      return fallback;
+    }
   }
+  const legacyKey = LEGACY_STORAGE_BY_NEW_KEY[key] ?? null;
+  const legacyStorageHandle = getLegacyStorageHandle();
   try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    const rawLegacy = legacyKey ? legacyStorageHandle?.getItem(legacyKey) : null;
+    if (!rawLegacy) {
+      return fallback;
+    }
+    if (sessionStorageHandle) {
+      sessionStorageHandle.setItem(key, rawLegacy);
+    } else {
+      writeToMemoryStorage(key, rawLegacy);
+    }
+    return JSON.parse(rawLegacy);
   } catch {
     return fallback;
   }
 }
 function writeStorage(key, value) {
-  if (typeof window === "undefined") {
-    return;
-  }
+  const serializedValue = JSON.stringify(value);
+  const sessionStorageHandle = getSessionStorageHandle();
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    if (sessionStorageHandle) {
+      sessionStorageHandle.setItem(key, serializedValue);
+    } else {
+      writeToMemoryStorage(key, serializedValue);
+    }
   } catch {
+    writeToMemoryStorage(key, serializedValue);
   }
+}
+function matchesOrderToProfile(order, profile) {
+  const profileEmail = normalizeEmail(profile?.email);
+  const orderEmail = normalizeEmail(order?.email);
+  const profilePhone = normalizePhone(profile?.phone);
+  const orderPhone = normalizePhone(order?.phone);
+  const profileCustomerNumber = normalizeCustomerNumber(profile?.customerNumber);
+  const orderCustomerNumber = normalizeCustomerNumber(order?.customerNumber);
+  return Boolean(
+    profileCustomerNumber && orderCustomerNumber === profileCustomerNumber || profileEmail && orderEmail === profileEmail || profilePhone && orderPhone === profilePhone
+  );
+}
+function hasSavedIdentity(profile) {
+  return Boolean(
+    profile?.name && (normalizeEmail(profile?.email) || normalizePhone(profile?.phone) || normalizeCustomerNumber(profile?.customerNumber))
+  );
 }
 function mergeOrdersByNumber(primaryOrders, secondaryOrders = []) {
   const orderMap = /* @__PURE__ */ new Map();
@@ -22816,31 +22910,33 @@ function formatMessageTime(sentAt, locale) {
   }).format(new Date(sentAt));
 }
 function App() {
-  const [siteLocale, setSiteLocale] = (0, import_react.useState)("en");
+  const [siteLocale, setSiteLocale] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.locale, "en"));
   const [route, setRoute] = (0, import_react.useState)(() => parseRoute(window.location.pathname));
   const [heroIndex, setHeroIndex] = (0, import_react.useState)(0);
-  const [widgetOpen, setWidgetOpen] = (0, import_react.useState)(false);
-  const [widgetView, setWidgetView] = (0, import_react.useState)("home");
+  const [widgetOpen, setWidgetOpen] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.widgetOpen, false));
+  const [widgetView, setWidgetView] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.widgetView, "home"));
   const [bootstrapData, setBootstrapData] = (0, import_react.useState)(null);
-  const [messages, setMessages] = (0, import_react.useState)([]);
-  const [sessionId, setSessionId] = (0, import_react.useState)(() => crypto.randomUUID());
-  const [draft, setDraft] = (0, import_react.useState)("");
+  const [messages, setMessages] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.messages, []));
+  const [sessionId, setSessionId] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.sessionId, crypto.randomUUID()));
+  const [draft, setDraft] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.draft, ""));
   const [cartItems, setCartItems] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.cart, []));
   const [cartOpen, setCartOpen] = (0, import_react.useState)(false);
   const [selectedProductId, setSelectedProductId] = (0, import_react.useState)(null);
   const [orderList, setOrderList] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.orders, []));
   const [ordersLoaded, setOrdersLoaded] = (0, import_react.useState)(true);
-  const [checkoutNotice, setCheckoutNotice] = (0, import_react.useState)(null);
+  const [checkoutNotice, setCheckoutNotice] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.checkoutNotice, null));
   const [checkoutLoading, setCheckoutLoading] = (0, import_react.useState)(false);
   const [checkoutError, setCheckoutError] = (0, import_react.useState)("");
   const [toastNotice, setToastNotice] = (0, import_react.useState)(null);
-  const [queuedPrompt, setQueuedPrompt] = (0, import_react.useState)("");
+  const [queuedPrompt, setQueuedPrompt] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.queuedPrompt, ""));
   const [customerProfile, setCustomerProfile] = (0, import_react.useState)(() => {
     const saved = readStorage(STORAGE_KEYS.profile, {});
-    const hasIdentity = Boolean(saved?.name && saved?.email);
+    const hasIdentity = hasSavedIdentity(saved);
     return {
       name: saved?.name ?? "",
       email: saved?.email ?? "",
+      phone: saved?.phone ?? "",
+      customerNumber: saved?.customerNumber ?? "",
       newsletter: Boolean(saved?.newsletter),
       submitted: Boolean(saved?.submitted ?? hasIdentity)
     };
@@ -22854,7 +22950,7 @@ function App() {
   const content = localized[siteLocale];
   const catalog = products.map((product) => localizeProduct(product, siteLocale));
   const selectedProduct = selectedProductId ? catalog.find((product) => product.id === selectedProductId) ?? null : null;
-  const matchedProfileOrders = customerProfile.submitted && customerProfile.email ? orderList.filter((order) => String(order.email).toLowerCase() === customerProfile.email.toLowerCase()) : [];
+  const matchedProfileOrders = customerProfile.submitted && hasSavedIdentity(customerProfile) ? orderList.filter((order) => matchesOrderToProfile(order, customerProfile)) : [];
   const visibleOrderSource = matchedProfileOrders.length > 0 ? matchedProfileOrders : orderList;
   const selectedOrderSource = route.orderNumber ? orderList.find((order) => order.orderNumber === route.orderNumber) ?? null : null;
   const selectedOrder = selectedOrderSource ? localizeOrder(selectedOrderSource, siteLocale) : null;
@@ -22885,6 +22981,30 @@ function App() {
     writeStorage(STORAGE_KEYS.profile, customerProfile);
   }, [customerProfile]);
   (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.messages, messages);
+  }, [messages]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.sessionId, sessionId);
+  }, [sessionId]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.locale, siteLocale);
+  }, [siteLocale]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.widgetOpen, widgetOpen);
+  }, [widgetOpen]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.widgetView, widgetView);
+  }, [widgetView]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.draft, draft);
+  }, [draft]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.queuedPrompt, queuedPrompt);
+  }, [queuedPrompt]);
+  (0, import_react.useEffect)(() => {
+    writeStorage(STORAGE_KEYS.checkoutNotice, checkoutNotice);
+  }, [checkoutNotice]);
+  (0, import_react.useEffect)(() => {
     writeStorage(STORAGE_KEYS.orders, orderList);
   }, [orderList]);
   (0, import_react.useEffect)(() => {
@@ -22895,9 +23015,11 @@ function App() {
       const response = await fetch(`/api/bootstrap?locale=${siteLocale}`);
       const data = await response.json();
       setBootstrapData(data);
-      setMessages([
-        createChatMessage("bot", data.welcome)
-      ]);
+      setMessages(
+        (current) => current.length > 0 ? current : [
+          createChatMessage("bot", data.welcome)
+        ]
+      );
     }
     loadBootstrap();
   }, [siteLocale]);
@@ -22975,10 +23097,11 @@ function App() {
           sessionId,
           message: nextMessage,
           preferredLocale: siteLocale,
-          knownOrders: orderList,
           customerProfile: customerProfile.submitted ? {
             name: customerProfile.name,
             email: customerProfile.email,
+            phone: customerProfile.phone,
+            customerNumber: customerProfile.customerNumber,
             newsletter: customerProfile.newsletter
           } : null
         })
@@ -23087,8 +23210,11 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           customerName: customerProfile.name || (siteLocale === "ar" ? "\u0645\u062A\u0633\u0648\u0642 \u062A\u062C\u0631\u064A\u0628\u064A" : "Demo shopper"),
           email: customerProfile.email || "shopper@example.com",
+          phone: customerProfile.phone || null,
+          customerNumber: customerProfile.customerNumber || null,
           items: cartItems,
           locale: siteLocale
         })
@@ -23096,6 +23222,9 @@ function App() {
       const data = await response.json();
       if (!response.ok || !data.order?.orderNumber) {
         throw new Error(data.error || "Failed to create order");
+      }
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
       }
       setOrderList((current) => mergeOrdersByNumber([data.order], current));
       setCartItems([]);
@@ -23127,6 +23256,8 @@ function App() {
   async function submitLeadProfile(profile) {
     const nextProfile = {
       ...profile,
+      phone: normalizePhone(profile.phone),
+      customerNumber: normalizeCustomerNumber(profile.customerNumber),
       submitted: true
     };
     setCustomerProfile(nextProfile);
@@ -23486,7 +23617,7 @@ function AccountPage({
   orders,
   storedOrderCount
 }) {
-  const hasProfile = customerProfile.submitted && customerProfile.email;
+  const hasProfile = customerProfile.submitted && hasSavedIdentity(customerProfile);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "account-page", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "section-frame account-hero", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-hero-copy", children: [
@@ -23494,12 +23625,12 @@ function AccountPage({
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: localizeText(locale, "Track every order in one place", "\u062A\u0627\u0628\u0639 \u0643\u0644 \u0637\u0644\u0628\u0627\u062A\u0643 \u0645\u0646 \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: hasProfile ? localizeText(
           locale,
-          "Your saved profile and recent orders are stored locally on this device, so you can return and continue from the same account view.",
-          "\u0646\u062D\u0641\u0638 \u0645\u0644\u0641\u0643 \u0648\u0637\u0644\u0628\u0627\u062A\u0643 \u0627\u0644\u0623\u062E\u064A\u0631\u0629 \u0645\u062D\u0644\u064A\u064B\u0627 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u062D\u062A\u0649 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0631\u062C\u0648\u0639 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0645\u0646 \u0646\u0641\u0633 \u0627\u0644\u0635\u0641\u062D\u0629."
+          "Your saved profile and recent orders live in this browser session, so you can refresh and continue from the same account view without re-entering them.",
+          "\u0646\u062D\u0641\u0638 \u0645\u0644\u0641\u0643 \u0648\u0637\u0644\u0628\u0627\u062A\u0643 \u0627\u0644\u0623\u062E\u064A\u0631\u0629 \u062F\u0627\u062E\u0644 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u062D\u062A\u0649 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u062A\u062D\u062F\u064A\u062B \u0648\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0628\u062F\u0648\u0646 \u0625\u0639\u0627\u062F\u0629 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A."
         ) : localizeText(
           locale,
           "Complete your support profile once in chat, then your future orders will appear here automatically.",
-          "\u0623\u0643\u0645\u0644 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0628\u0639\u062F\u0647\u0627 \u0633\u062A\u0638\u0647\u0631 \u0637\u0644\u0628\u0627\u062A\u0643 \u0647\u0646\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627."
+          "\u0623\u0643\u0645\u0644 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0628\u0639\u062F\u0647\u0627 \u0633\u062A\u0638\u0647\u0631 \u0637\u0644\u0628\u0627\u062A\u0643 \u0647\u0646\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627 \u062E\u0644\u0627\u0644 \u0646\u0641\u0633 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D."
         ) }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-hero-actions", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "primary-cta", type: "button", onClick: onBackToStore, children: localizeText(locale, "Continue shopping", "\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u062A\u0633\u0648\u0642") }),
@@ -23522,6 +23653,14 @@ function AccountPage({
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.email || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Phone", "\u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.phone || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Customer number", "\u0631\u0642\u0645 \u0627\u0644\u0639\u0645\u064A\u0644") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.customerNumber || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Newsletter", "\u0627\u0644\u0646\u0634\u0631\u0629 \u0627\u0644\u0628\u0631\u064A\u062F\u064A\u0629") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.newsletter ? localizeText(locale, "Subscribed", "\u0645\u0634\u062A\u0631\u0643") : localizeText(locale, "Not subscribed", "\u063A\u064A\u0631 \u0645\u0634\u062A\u0631\u0643") })
           ] }),
@@ -23535,11 +23674,11 @@ function AccountPage({
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "section-frame account-orders-frame", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "section-title-row", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: localizeText(locale, "My orders", "\u0637\u0644\u0628\u0627\u062A\u064A") }) }),
       !hasProfile && orders.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-inline-note", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Saved local orders", "\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Saved session orders", "\u062A\u0645 \u062D\u0641\u0638 \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0629") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: localizeText(
           locale,
-          "These local orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
-          "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632. \u064A\u0645\u0643\u0646\u0643 \u0625\u0636\u0627\u0641\u0629 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0644\u0627\u062D\u0642\u064B\u0627 \u0644\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062E\u0635\u064A \u0623\u064A\u0636\u064B\u0627."
+          "These orders were created in this browser session. Add your support details anytime to link future orders to your shopper profile too.",
+          "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u062F\u0627\u062E\u0644 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0627\u0644\u062D\u0627\u0644\u064A\u0629. \u064A\u0645\u0643\u0646\u0643 \u0625\u0636\u0627\u0641\u0629 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0644\u0627\u062D\u0642\u064B\u0627 \u0644\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062E\u0635\u064A \u0623\u064A\u0636\u064B\u0627."
         ) })
       ] }) : null,
       orders.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-empty-state", children: [
@@ -23959,14 +24098,24 @@ function SupportWidget({
   const [compactMode, setCompactMode] = (0, import_react.useState)(false);
   const [leadName, setLeadName] = (0, import_react.useState)("");
   const [leadEmail, setLeadEmail] = (0, import_react.useState)("");
+  const [leadPhone, setLeadPhone] = (0, import_react.useState)("");
+  const [leadCustomerNumber, setLeadCustomerNumber] = (0, import_react.useState)("");
   const [leadNewsletter, setLeadNewsletter] = (0, import_react.useState)(false);
   const messageListRef = (0, import_react.useRef)(null);
   const emojiChoices = ["\u{1F642}", "\u{1F44D}", "\u{1F389}", "\u{1F64F}", "\u{1F499}", "\u{1F525}"];
   (0, import_react.useEffect)(() => {
     setLeadName(customerProfile.name ?? "");
     setLeadEmail(customerProfile.email ?? "");
+    setLeadPhone(customerProfile.phone ?? "");
+    setLeadCustomerNumber(customerProfile.customerNumber ?? "");
     setLeadNewsletter(customerProfile.newsletter ?? false);
-  }, [customerProfile.email, customerProfile.name, customerProfile.newsletter]);
+  }, [
+    customerProfile.customerNumber,
+    customerProfile.email,
+    customerProfile.name,
+    customerProfile.newsletter,
+    customerProfile.phone
+  ]);
   (0, import_react.useEffect)(() => {
     if (!open) {
       setShowMenu(false);
@@ -24083,7 +24232,7 @@ function SupportWidget({
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Order-aware", "\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0637\u0644\u0628\u0627\u062A\u0643") }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Saved details help us connect future orders on this device.", "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062A\u0633\u0627\u0639\u062F\u0646\u0627 \u0646\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.") })
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062A\u0633\u0627\u0639\u062F\u0646\u0627 \u0646\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0628\u062F\u0648\u0646 \u0623\u0646 \u0646\u0637\u0644\u0628\u0647\u0627 \u0645\u0646\u0643 \u0643\u0644 \u0645\u0631\u0629.") })
             ] })
           ] }),
           customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-capture-card lead-saved-card", children: [
@@ -24099,12 +24248,20 @@ function SupportWidget({
               /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Email", "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A") }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.email })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Phone", "\u0631\u0642\u0645 \u0627\u0644\u062C\u0648\u0627\u0644") }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.phone || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Customer number", "\u0631\u0642\u0645 \u0627\u0644\u0639\u0645\u064A\u0644") }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.customerNumber || localizeText(locale, "Not set yet", "\u063A\u064A\u0631 \u0645\u0636\u0627\u0641 \u0628\u0639\u062F") })
               ] })
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
               locale,
-              "Orders and future support chats can continue with the same saved identity.",
-              "\u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0646\u0641\u0633 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629."
+              "Orders and future support chats can continue with the same browser-session identity.",
+              "\u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0646\u0641\u0633 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062F\u0627\u062E\u0644 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D."
             ) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "button", onClick: () => onSetView("chat"), children: localizeText(locale, "Continue in chat", "\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") }) })
           ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
@@ -24113,12 +24270,17 @@ function SupportWidget({
               className: "lead-capture-card",
               onSubmit: (event) => {
                 event.preventDefault();
-                if (!leadName.trim() || !leadEmail.trim()) {
+                const hasReachableIdentity = Boolean(
+                  leadEmail.trim() || leadPhone.trim() || leadCustomerNumber.trim()
+                );
+                if (!leadName.trim() || !hasReachableIdentity) {
                   return;
                 }
                 onProfileSubmit({
                   name: leadName.trim(),
                   email: leadEmail.trim(),
+                  phone: leadPhone.trim(),
+                  customerNumber: leadCustomerNumber.trim(),
                   newsletter: leadNewsletter
                 });
               },
@@ -24145,6 +24307,24 @@ function SupportWidget({
                     placeholder: text.emailPlaceholder
                   }
                 ),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "input",
+                  {
+                    type: "tel",
+                    value: leadPhone,
+                    onChange: (event) => setLeadPhone(event.target.value),
+                    placeholder: text.phonePlaceholder
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "input",
+                  {
+                    type: "text",
+                    value: leadCustomerNumber,
+                    onChange: (event) => setLeadCustomerNumber(event.target.value),
+                    placeholder: text.customerNumberPlaceholder
+                  }
+                ),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", { className: "lead-checkbox", children: [
                   /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                     "input",
@@ -24158,8 +24338,8 @@ function SupportWidget({
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
                   locale,
-                  "We only use this profile to personalize support and attach demo orders on this device.",
-                  "\u0646\u0633\u062A\u062E\u062F\u0645 \u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641 \u0641\u0642\u0637 \u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u062F\u0639\u0645 \u0648\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632."
+                  "We use this browser-session profile to personalize support, reconnect this chat, and attach demo orders without asking again during the same session.",
+                  "\u0646\u0633\u062A\u062E\u062F\u0645 \u0645\u0644\u0641 \u062C\u0644\u0633\u0629 \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0647\u0630\u0627 \u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u062F\u0639\u0645\u060C \u0648\u0631\u0628\u0637 \u0646\u0641\u0633 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629\u060C \u0648\u0625\u0644\u062D\u0627\u0642 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0628\u062F\u0648\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0633\u0624\u0627\u0644 \u062E\u0644\u0627\u0644 \u0646\u0641\u0633 \u0627\u0644\u062C\u0644\u0633\u0629."
                 ) }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "submit", children: text.introSend }) })
               ]

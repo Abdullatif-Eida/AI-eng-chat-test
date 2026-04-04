@@ -27,6 +27,7 @@ Decision:
 - customer identity must exist in the current session to access customer-specific order details
 - provider lookups are filtered by the current customer
 - handoff idempotency is customer-scoped, so one shopper cannot reuse another shopper's handoff state inside the same browser session
+- the public HTTP chat route no longer trusts browser-supplied `knownOrders`; session-created demo orders are remembered server-side instead
 
 Current behavior:
 
@@ -46,6 +47,7 @@ Problem:
 Decision:
 
 - model instructions explicitly say tools are the only source of truth
+- sensitive customer-data journeys now use app-enforced tool-choice guardrails, so order/profile/policy/handoff flows are grounded even if the model would otherwise answer too early
 - outbound prompts and tool payloads are tokenized before they leave the trusted backend
 - tool layer enforces access regardless of model behavior
 - the final response contract is schema-bound, so intent and resolution are not reconstructed later with fragile heuristics
@@ -66,6 +68,7 @@ Decision:
 - a dedicated data-protection gateway tokenizes emails, order numbers, phone numbers, payment-like strings, and handoff ids before OpenAI sees them
 - the same gateway now tokenizes accidental bearer tokens and JWT-like secrets before outbound sharing
 - a dedicated external-sharing policy now redacts secret-shaped keys like `apiKey`, `accessToken`, `authorization`, and cookies from nested tool payloads
+- per-tool sharing contracts now drop unapproved fields entirely, so “harmless looking” provider extras like debug blobs or internal notes are not forwarded just because they are not secret-shaped
 - outbound payloads are bounded by depth, array count, object key count, and string length before they leave the trusted backend
 - profile tool returns masked email to the model-facing layer
 - order access is minimized to needed fields
@@ -88,6 +91,7 @@ Decision:
 - session identity is capped
 - inactive sessions expire after a fixed TTL
 - cache and idempotency stores are size-bounded so a long-running session does not grow without limit
+- oversized retained values are skipped instead of being cached in memory
 
 Current behavior:
 
@@ -142,9 +146,11 @@ Problem:
 Decision:
 
 - OpenAI Responses requests use `store: false`
+- OpenRouter provider routing denies data collection by default, with optional ZDR-only routing for stricter deployments
 - analytics are bounded in memory
 - sessions are short-lived
 - raw identifiers are replaced by session-scoped tokens before external sharing
+- cached order-detail entries are minimized to tool-safe summaries instead of raw provider objects
 - no durable transcript store is enabled in this project
 
 Why this matters:
@@ -160,6 +166,7 @@ Problem:
 Decision:
 
 - outbound tool payloads now pass through a dedicated external-sharing gateway before they are forwarded to OpenAI
+- each tool forwards only an approved schema slice instead of the whole payload
 - dangerous keys are redacted
 - long strings are truncated
 - deep or wide objects are bounded
@@ -186,7 +193,7 @@ Problem:
 Decision:
 
 - request-scoped OpenAI key overrides are still supported in the core chatbot runtime for trusted backend callers
-- HTTP entrypoints only forward `x-openai-key` when `ALLOW_CLIENT_OPENAI_KEY_OVERRIDE=true`
+- HTTP entrypoints only forward `x-openrouter-key` when `ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE=true`
 
 Why this matters:
 
@@ -221,6 +228,7 @@ Decision:
 
 - customer-order cache TTL is short
 - policy/catalog cache can live longer because it changes less frequently
+- OpenRouter-facing system instructions are kept stable so DeepSeek/OpenRouter prompt caching can do more useful work across multi-turn sessions
 
 Current TTLs:
 

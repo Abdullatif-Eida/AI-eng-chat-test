@@ -180,6 +180,8 @@ const localized = {
       introTitle: "Please introduce yourself",
       namePlaceholder: "Enter your name",
       emailPlaceholder: "Enter your email",
+      phonePlaceholder: "Enter your phone number",
+      customerNumberPlaceholder: "Enter your customer number",
       newsletter: "Sign up for our newsletter",
       introSend: "Send",
       skipIntro: "Skip for now",
@@ -385,6 +387,8 @@ const localized = {
       introTitle: "عرّفنا بنفسك",
       namePlaceholder: "أدخل اسمك",
       emailPlaceholder: "أدخل بريدك الإلكتروني",
+      phonePlaceholder: "أدخل رقم الجوال",
+      customerNumberPlaceholder: "أدخل رقم العميل",
       newsletter: "سجل في النشرة البريدية",
       introSend: "إرسال",
       skipIntro: "تخطي الآن",
@@ -455,10 +459,76 @@ const orderStatusMap = {
 };
 
 const STORAGE_KEYS = {
+  cart: "lean-souq-session-cart",
+  orders: "lean-souq-session-orders",
+  profile: "lean-souq-session-profile",
+  messages: "lean-souq-session-messages",
+  sessionId: "lean-souq-session-id",
+  locale: "lean-souq-session-locale",
+  widgetOpen: "lean-souq-session-widget-open",
+  widgetView: "lean-souq-session-widget-view",
+  draft: "lean-souq-session-draft",
+  queuedPrompt: "lean-souq-session-queued-prompt",
+  checkoutNotice: "lean-souq-session-checkout-notice"
+};
+
+const LEGACY_STORAGE_KEYS = {
   cart: "lean-souq-cart",
   orders: "lean-souq-orders",
   profile: "lean-souq-profile"
 };
+
+const LEGACY_STORAGE_BY_NEW_KEY = {
+  [STORAGE_KEYS.cart]: LEGACY_STORAGE_KEYS.cart,
+  [STORAGE_KEYS.orders]: LEGACY_STORAGE_KEYS.orders,
+  [STORAGE_KEYS.profile]: LEGACY_STORAGE_KEYS.profile
+};
+
+const memorySessionStorage = new Map();
+
+function normalizeEmail(value = "") {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function normalizePhone(value = "") {
+  return String(value ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function normalizeCustomerNumber(value = "") {
+  return String(value ?? "").trim().toUpperCase().replace(/\s+/g, "-").slice(0, 64);
+}
+
+function getSessionStorageHandle() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getLegacyStorageHandle() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function readFromMemoryStorage(key) {
+  return memorySessionStorage.has(key) ? memorySessionStorage.get(key) : null;
+}
+
+function writeToMemoryStorage(key, value) {
+  memorySessionStorage.set(key, value);
+}
 
 function parseRoute(pathname) {
   const normalizedPath = pathname && pathname !== "/" ? pathname.replace(/\/+$/, "") : "/";
@@ -485,28 +555,73 @@ function parseRoute(pathname) {
 }
 
 function readStorage(key, fallback) {
-  if (typeof window === "undefined") {
-    return fallback;
+  const sessionStorageHandle = getSessionStorageHandle();
+  const rawValue = sessionStorageHandle
+    ? sessionStorageHandle.getItem(key)
+    : readFromMemoryStorage(key);
+
+  if (rawValue) {
+    try {
+      return JSON.parse(rawValue);
+    } catch {
+      return fallback;
+    }
   }
 
+  const legacyKey = LEGACY_STORAGE_BY_NEW_KEY[key] ?? null;
+  const legacyStorageHandle = getLegacyStorageHandle();
   try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    const rawLegacy = legacyKey ? legacyStorageHandle?.getItem(legacyKey) : null;
+    if (!rawLegacy) {
+      return fallback;
+    }
+
+    if (sessionStorageHandle) {
+      sessionStorageHandle.setItem(key, rawLegacy);
+    } else {
+      writeToMemoryStorage(key, rawLegacy);
+    }
+
+    return JSON.parse(rawLegacy);
   } catch {
     return fallback;
   }
 }
 
 function writeStorage(key, value) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+  const serializedValue = JSON.stringify(value);
+  const sessionStorageHandle = getSessionStorageHandle();
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    if (sessionStorageHandle) {
+      sessionStorageHandle.setItem(key, serializedValue);
+    } else {
+      writeToMemoryStorage(key, serializedValue);
+    }
   } catch {
-    // Ignore storage write failures in private mode or limited environments.
+    writeToMemoryStorage(key, serializedValue);
   }
+}
+
+function matchesOrderToProfile(order, profile) {
+  const profileEmail = normalizeEmail(profile?.email);
+  const orderEmail = normalizeEmail(order?.email);
+  const profilePhone = normalizePhone(profile?.phone);
+  const orderPhone = normalizePhone(order?.phone);
+  const profileCustomerNumber = normalizeCustomerNumber(profile?.customerNumber);
+  const orderCustomerNumber = normalizeCustomerNumber(order?.customerNumber);
+
+  return Boolean(
+    (profileCustomerNumber && orderCustomerNumber === profileCustomerNumber) ||
+    (profileEmail && orderEmail === profileEmail) ||
+    (profilePhone && orderPhone === profilePhone)
+  );
+}
+
+function hasSavedIdentity(profile) {
+  return Boolean(
+    profile?.name &&
+    (normalizeEmail(profile?.email) || normalizePhone(profile?.phone) || normalizeCustomerNumber(profile?.customerNumber))
+  );
 }
 
 function mergeOrdersByNumber(primaryOrders, secondaryOrders = []) {
@@ -671,32 +786,34 @@ function formatMessageTime(sentAt, locale) {
 }
 
 function App() {
-  const [siteLocale, setSiteLocale] = useState("en");
+  const [siteLocale, setSiteLocale] = useState(() => readStorage(STORAGE_KEYS.locale, "en"));
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
   const [heroIndex, setHeroIndex] = useState(0);
-  const [widgetOpen, setWidgetOpen] = useState(false);
-  const [widgetView, setWidgetView] = useState("home");
+  const [widgetOpen, setWidgetOpen] = useState(() => readStorage(STORAGE_KEYS.widgetOpen, false));
+  const [widgetView, setWidgetView] = useState(() => readStorage(STORAGE_KEYS.widgetView, "home"));
   const [bootstrapData, setBootstrapData] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
-  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState(() => readStorage(STORAGE_KEYS.messages, []));
+  const [sessionId, setSessionId] = useState(() => readStorage(STORAGE_KEYS.sessionId, crypto.randomUUID()));
+  const [draft, setDraft] = useState(() => readStorage(STORAGE_KEYS.draft, ""));
   const [cartItems, setCartItems] = useState(() => readStorage(STORAGE_KEYS.cart, []));
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [orderList, setOrderList] = useState(() => readStorage(STORAGE_KEYS.orders, []));
   const [ordersLoaded, setOrdersLoaded] = useState(true);
-  const [checkoutNotice, setCheckoutNotice] = useState(null);
+  const [checkoutNotice, setCheckoutNotice] = useState(() => readStorage(STORAGE_KEYS.checkoutNotice, null));
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [toastNotice, setToastNotice] = useState(null);
-  const [queuedPrompt, setQueuedPrompt] = useState("");
+  const [queuedPrompt, setQueuedPrompt] = useState(() => readStorage(STORAGE_KEYS.queuedPrompt, ""));
   const [customerProfile, setCustomerProfile] = useState(() => {
     const saved = readStorage(STORAGE_KEYS.profile, {});
-    const hasIdentity = Boolean(saved?.name && saved?.email);
+    const hasIdentity = hasSavedIdentity(saved);
 
     return {
       name: saved?.name ?? "",
       email: saved?.email ?? "",
+      phone: saved?.phone ?? "",
+      customerNumber: saved?.customerNumber ?? "",
       newsletter: Boolean(saved?.newsletter),
       submitted: Boolean(saved?.submitted ?? hasIdentity)
     };
@@ -710,8 +827,8 @@ function App() {
   const content = localized[siteLocale];
   const catalog = products.map((product) => localizeProduct(product, siteLocale));
   const selectedProduct = selectedProductId ? catalog.find((product) => product.id === selectedProductId) ?? null : null;
-  const matchedProfileOrders = customerProfile.submitted && customerProfile.email
-    ? orderList.filter((order) => String(order.email).toLowerCase() === customerProfile.email.toLowerCase())
+  const matchedProfileOrders = customerProfile.submitted && hasSavedIdentity(customerProfile)
+    ? orderList.filter((order) => matchesOrderToProfile(order, customerProfile))
     : [];
   const visibleOrderSource = matchedProfileOrders.length > 0 ? matchedProfileOrders : orderList;
   const selectedOrderSource = route.orderNumber
@@ -753,6 +870,38 @@ function App() {
   }, [customerProfile]);
 
   useEffect(() => {
+    writeStorage(STORAGE_KEYS.messages, messages);
+  }, [messages]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.sessionId, sessionId);
+  }, [sessionId]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.locale, siteLocale);
+  }, [siteLocale]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.widgetOpen, widgetOpen);
+  }, [widgetOpen]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.widgetView, widgetView);
+  }, [widgetView]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.draft, draft);
+  }, [draft]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.queuedPrompt, queuedPrompt);
+  }, [queuedPrompt]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.checkoutNotice, checkoutNotice);
+  }, [checkoutNotice]);
+
+  useEffect(() => {
     writeStorage(STORAGE_KEYS.orders, orderList);
   }, [orderList]);
 
@@ -765,9 +914,13 @@ function App() {
       const response = await fetch(`/api/bootstrap?locale=${siteLocale}`);
       const data = await response.json();
       setBootstrapData(data);
-      setMessages([
-        createChatMessage("bot", data.welcome)
-      ]);
+      setMessages((current) =>
+        current.length > 0
+          ? current
+          : [
+              createChatMessage("bot", data.welcome)
+            ]
+      );
     }
 
     loadBootstrap();
@@ -869,11 +1022,12 @@ function App() {
           sessionId,
           message: nextMessage,
           preferredLocale: siteLocale,
-          knownOrders: orderList,
           customerProfile: customerProfile.submitted
             ? {
                 name: customerProfile.name,
                 email: customerProfile.email,
+                phone: customerProfile.phone,
+                customerNumber: customerProfile.customerNumber,
                 newsletter: customerProfile.newsletter
               }
             : null
@@ -1004,8 +1158,11 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           customerName: customerProfile.name || (siteLocale === "ar" ? "متسوق تجريبي" : "Demo shopper"),
           email: customerProfile.email || "shopper@example.com",
+          phone: customerProfile.phone || null,
+          customerNumber: customerProfile.customerNumber || null,
           items: cartItems,
           locale: siteLocale
         })
@@ -1017,6 +1174,9 @@ function App() {
         throw new Error(data.error || "Failed to create order");
       }
 
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
       setOrderList((current) => mergeOrdersByNumber([data.order], current));
       setCartItems([]);
       setCartOpen(false);
@@ -1048,6 +1208,8 @@ function App() {
   async function submitLeadProfile(profile) {
     const nextProfile = {
       ...profile,
+      phone: normalizePhone(profile.phone),
+      customerNumber: normalizeCustomerNumber(profile.customerNumber),
       submitted: true
     };
     setCustomerProfile(nextProfile);
@@ -1513,7 +1675,7 @@ function AccountPage({
   orders,
   storedOrderCount
 }) {
-  const hasProfile = customerProfile.submitted && customerProfile.email;
+  const hasProfile = customerProfile.submitted && hasSavedIdentity(customerProfile);
 
   return (
     <section className="account-page">
@@ -1525,13 +1687,13 @@ function AccountPage({
             {hasProfile
               ? localizeText(
                   locale,
-                  "Your saved profile and recent orders are stored locally on this device, so you can return and continue from the same account view.",
-                  "نحفظ ملفك وطلباتك الأخيرة محليًا على هذا الجهاز حتى تتمكن من الرجوع ومتابعة الطلبات من نفس الصفحة."
+                  "Your saved profile and recent orders live in this browser session, so you can refresh and continue from the same account view without re-entering them.",
+                  "نحفظ ملفك وطلباتك الأخيرة داخل جلسة المتصفح الحالية حتى تتمكن من التحديث والمتابعة بدون إعادة إدخال البيانات."
                 )
               : localizeText(
                   locale,
                   "Complete your support profile once in chat, then your future orders will appear here automatically.",
-                  "أكمل بياناتك مرة واحدة داخل المحادثة، وبعدها ستظهر طلباتك هنا تلقائيًا."
+                  "أكمل بياناتك مرة واحدة داخل المحادثة، وبعدها ستظهر طلباتك هنا تلقائيًا خلال نفس جلسة المتصفح."
                 )}
           </p>
           <div className="account-hero-actions">
@@ -1562,6 +1724,14 @@ function AccountPage({
               <strong>{customerProfile.email || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
             </div>
             <div>
+              <span>{localizeText(locale, "Phone", "رقم الجوال")}</span>
+              <strong>{customerProfile.phone || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
+            </div>
+            <div>
+              <span>{localizeText(locale, "Customer number", "رقم العميل")}</span>
+              <strong>{customerProfile.customerNumber || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
+            </div>
+            <div>
               <span>{localizeText(locale, "Newsletter", "النشرة البريدية")}</span>
               <strong>{customerProfile.newsletter ? localizeText(locale, "Subscribed", "مشترك") : localizeText(locale, "Not subscribed", "غير مشترك")}</strong>
             </div>
@@ -1580,12 +1750,12 @@ function AccountPage({
 
         {!hasProfile && orders.length > 0 ? (
           <div className="account-inline-note">
-            <strong>{localizeText(locale, "Saved local orders", "تم حفظ الطلبات المحلية")}</strong>
+            <strong>{localizeText(locale, "Saved session orders", "تم حفظ طلبات الجلسة")}</strong>
             <p>
               {localizeText(
                 locale,
-                "These local orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
-                "تم إنشاء هذه الطلبات المحلية على هذا الجهاز. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
+                "These orders were created in this browser session. Add your support details anytime to link future orders to your shopper profile too.",
+                "تم إنشاء هذه الطلبات داخل جلسة المتصفح الحالية. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
               )}
             </p>
           </div>
@@ -2103,6 +2273,8 @@ function SupportWidget({
   const [compactMode, setCompactMode] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+  const [leadCustomerNumber, setLeadCustomerNumber] = useState("");
   const [leadNewsletter, setLeadNewsletter] = useState(false);
   const messageListRef = useRef(null);
   const emojiChoices = ["🙂", "👍", "🎉", "🙏", "💙", "🔥"];
@@ -2110,8 +2282,16 @@ function SupportWidget({
   useEffect(() => {
     setLeadName(customerProfile.name ?? "");
     setLeadEmail(customerProfile.email ?? "");
+    setLeadPhone(customerProfile.phone ?? "");
+    setLeadCustomerNumber(customerProfile.customerNumber ?? "");
     setLeadNewsletter(customerProfile.newsletter ?? false);
-  }, [customerProfile.email, customerProfile.name, customerProfile.newsletter]);
+  }, [
+    customerProfile.customerNumber,
+    customerProfile.email,
+    customerProfile.name,
+    customerProfile.newsletter,
+    customerProfile.phone
+  ]);
 
   useEffect(() => {
     if (!open) {
@@ -2246,7 +2426,7 @@ function SupportWidget({
             </article>
             <article className="widget-mini-stat">
               <strong>{localizeText(locale, "Order-aware", "مرتبطة بطلباتك")}</strong>
-              <span>{localizeText(locale, "Saved details help us connect future orders on this device.", "البيانات المحفوظة تساعدنا نربط الطلبات القادمة على هذا الجهاز.")}</span>
+              <span>{localizeText(locale, "Saved session details help us reconnect your orders without asking again.", "بيانات الجلسة المحفوظة تساعدنا نربط الطلبات بدون أن نطلبها منك كل مرة.")}</span>
             </article>
           </section>
 
@@ -2265,12 +2445,20 @@ function SupportWidget({
                   <span>{localizeText(locale, "Email", "البريد الإلكتروني")}</span>
                   <strong dir="ltr">{customerProfile.email}</strong>
                 </div>
+                <div>
+                  <span>{localizeText(locale, "Phone", "رقم الجوال")}</span>
+                  <strong dir="ltr">{customerProfile.phone || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
+                </div>
+                <div>
+                  <span>{localizeText(locale, "Customer number", "رقم العميل")}</span>
+                  <strong dir="ltr">{customerProfile.customerNumber || localizeText(locale, "Not set yet", "غير مضاف بعد")}</strong>
+                </div>
               </div>
               <p className="lead-card-note">
                 {localizeText(
                   locale,
-                  "Orders and future support chats can continue with the same saved identity.",
-                  "يمكن متابعة الطلبات والمحادثات القادمة بنفس الهوية المحفوظة."
+                  "Orders and future support chats can continue with the same browser-session identity.",
+                  "يمكن متابعة الطلبات والمحادثات القادمة بنفس الهوية المحفوظة داخل جلسة المتصفح."
                 )}
               </p>
               <div className="lead-actions">
@@ -2284,13 +2472,19 @@ function SupportWidget({
               className="lead-capture-card"
               onSubmit={(event) => {
                 event.preventDefault();
-                if (!leadName.trim() || !leadEmail.trim()) {
+                const hasReachableIdentity = Boolean(
+                  leadEmail.trim() || leadPhone.trim() || leadCustomerNumber.trim()
+                );
+
+                if (!leadName.trim() || !hasReachableIdentity) {
                   return;
                 }
 
                 onProfileSubmit({
                   name: leadName.trim(),
                   email: leadEmail.trim(),
+                  phone: leadPhone.trim(),
+                  customerNumber: leadCustomerNumber.trim(),
                   newsletter: leadNewsletter
                 });
               }}
@@ -2311,6 +2505,18 @@ function SupportWidget({
                 onChange={(event) => setLeadEmail(event.target.value)}
                 placeholder={text.emailPlaceholder}
               />
+              <input
+                type="tel"
+                value={leadPhone}
+                onChange={(event) => setLeadPhone(event.target.value)}
+                placeholder={text.phonePlaceholder}
+              />
+              <input
+                type="text"
+                value={leadCustomerNumber}
+                onChange={(event) => setLeadCustomerNumber(event.target.value)}
+                placeholder={text.customerNumberPlaceholder}
+              />
               <label className="lead-checkbox">
                 <input
                   type="checkbox"
@@ -2322,8 +2528,8 @@ function SupportWidget({
               <p className="lead-card-note">
                 {localizeText(
                   locale,
-                  "We only use this profile to personalize support and attach demo orders on this device.",
-                  "نستخدم هذا الملف فقط لتخصيص الدعم وربط الطلبات التجريبية على هذا الجهاز."
+                  "We use this browser-session profile to personalize support, reconnect this chat, and attach demo orders without asking again during the same session.",
+                  "نستخدم ملف جلسة المتصفح هذا لتخصيص الدعم، وربط نفس المحادثة، وإلحاق الطلبات التجريبية بدون إعادة السؤال خلال نفس الجلسة."
                 )}
               </p>
               <div className="lead-actions">

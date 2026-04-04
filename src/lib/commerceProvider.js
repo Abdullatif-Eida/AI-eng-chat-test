@@ -59,8 +59,66 @@ function normalizeEmail(email = "") {
   return String(email).trim().toLowerCase();
 }
 
+function normalizePhone(phone = "") {
+  return String(phone).replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function normalizeCustomerReference(value = "") {
+  return String(value).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 64);
+}
+
 function normalizeOrderNumber(orderNumber = "") {
   return String(orderNumber).trim().toUpperCase();
+}
+
+function getCustomerIdentity(customer = {}) {
+  return {
+    email: normalizeEmail(customer?.email),
+    phone: normalizePhone(customer?.phone),
+    customerNumber: normalizeCustomerReference(
+      customer?.customerNumber ?? customer?.customerId ?? customer?.id
+    )
+  };
+}
+
+function getOrderIdentity(order = {}) {
+  return {
+    email: normalizeEmail(order?.email),
+    phone: normalizePhone(order?.phone),
+    customerNumber: normalizeCustomerReference(
+      order?.customerNumber ?? order?.customerId ?? order?.id
+    )
+  };
+}
+
+function matchesOrderToCustomer(order, customer) {
+  const customerIdentity = getCustomerIdentity(customer);
+  const orderIdentity = getOrderIdentity(order);
+
+  if (
+    !customerIdentity.email &&
+    !customerIdentity.phone &&
+    !customerIdentity.customerNumber
+  ) {
+    return false;
+  }
+
+  return (
+    (customerIdentity.customerNumber &&
+      orderIdentity.customerNumber === customerIdentity.customerNumber) ||
+    (customerIdentity.email && orderIdentity.email === customerIdentity.email) ||
+    (customerIdentity.phone && orderIdentity.phone === customerIdentity.phone)
+  );
+}
+
+function getTrustedKnownOrders(knownOrders, customer) {
+  if (!Array.isArray(knownOrders)) {
+    return [];
+  }
+
+  return knownOrders
+    .map(normalizeOrder)
+    .filter((order) => matchesOrderToCustomer(order, customer));
 }
 
 function dedupeOrders(entries = []) {
@@ -109,13 +167,10 @@ function buildProductSummary(product, locale = "en") {
 
 export function createSeededCommerceProvider() {
   function listVisibleOrders({ customer, knownOrders }) {
-    const localOrders = Array.isArray(knownOrders) ? knownOrders.map(enrichOrder) : [];
-    const customerEmail = normalizeEmail(customer?.email);
-    const providerOrders = customerEmail
-      ? seededOrders
-          .filter((order) => normalizeEmail(order.email) === customerEmail)
-          .map(enrichOrder)
-      : [];
+    const localOrders = getTrustedKnownOrders(knownOrders, customer).map(enrichOrder);
+    const providerOrders = seededOrders
+      .filter((order) => matchesOrderToCustomer(order, customer))
+      .map(enrichOrder);
 
     return sortOrdersNewestFirst(dedupeOrders([...localOrders, ...providerOrders]));
   }
@@ -137,10 +192,19 @@ export function createSeededCommerceProvider() {
     name: "seeded-commerce-provider",
 
     async getCustomerProfile({ customer }) {
-      return customer?.email
+      return matchesOrderToCustomer(
+        {
+          email: customer?.email,
+          phone: customer?.phone,
+          customerNumber: customer?.customerNumber ?? customer?.customerId ?? customer?.id
+        },
+        customer
+      )
         ? {
             name: customer?.name ?? null,
             email: customer.email,
+            phone: customer?.phone ?? null,
+            customerNumber: customer?.customerNumber ?? null,
             newsletter: Boolean(customer?.newsletter)
           }
         : null;
@@ -267,6 +331,8 @@ function normalizeRemoteProfile(payload, customer) {
   return {
     ...profile,
     email: profile.email ?? customer?.email ?? null,
+    phone: profile.phone ?? customer?.phone ?? null,
+    customerNumber: profile.customerNumber ?? customer?.customerNumber ?? null,
     name: profile.name ?? customer?.name ?? null,
     newsletter: Boolean(profile.newsletter ?? customer?.newsletter)
   };
@@ -302,13 +368,16 @@ export function createHttpCommerceProvider({
   }
 
   async function getRemoteOrders({ customer }) {
-    if (!customer?.email) {
+    const customerIdentity = getCustomerIdentity(customer);
+    if (!customerIdentity.email && !customerIdentity.customerNumber && !customerIdentity.phone) {
       return [];
     }
 
     const payload = await requestJson(ordersPath, {
-      email: customer.email,
-      customerId: customer.customerId ?? customer.id ?? ""
+      email: customer?.email ?? "",
+      phone: customer?.phone ?? "",
+      customerNumber: customer?.customerNumber ?? "",
+      customerId: customer?.customerNumber ?? customer?.customerId ?? customer?.id ?? ""
     });
 
     return normalizeRemoteOrders(payload);
@@ -318,13 +387,16 @@ export function createHttpCommerceProvider({
     name: "http-commerce-provider",
 
     async getCustomerProfile({ customer }) {
-      if (!customer?.email) {
+      const customerIdentity = getCustomerIdentity(customer);
+      if (!customerIdentity.email && !customerIdentity.customerNumber && !customerIdentity.phone) {
         return null;
       }
 
       const payload = await requestJson(profilePath, {
-        email: customer.email,
-        customerId: customer.customerId ?? customer.id ?? ""
+        email: customer?.email ?? "",
+        phone: customer?.phone ?? "",
+        customerNumber: customer?.customerNumber ?? "",
+        customerId: customer?.customerNumber ?? customer?.customerId ?? customer?.id ?? ""
       });
 
       return normalizeRemoteProfile(payload, customer);
@@ -338,7 +410,7 @@ export function createHttpCommerceProvider({
     createHandoff: seeded.createHandoff,
 
     async listVisibleOrders({ customer, knownOrders }) {
-      const localOrders = Array.isArray(knownOrders) ? knownOrders.map(normalizeOrder) : [];
+      const localOrders = getTrustedKnownOrders(knownOrders, customer);
       const remoteOrders = await getRemoteOrders({ customer });
       return sortOrdersNewestFirst(dedupeOrders([...localOrders, ...remoteOrders]));
     },
@@ -359,13 +431,18 @@ export function createHttpCommerceProvider({
       }
 
       if (!customer?.email) {
-        return null;
+        const customerIdentity = getCustomerIdentity(customer);
+        if (!customerIdentity.customerNumber && !customerIdentity.phone) {
+          return null;
+        }
       }
 
       const payload = await requestJson(orderPath, {
         orderNumber: normalized,
-        email: customer.email,
-        customerId: customer.customerId ?? customer.id ?? ""
+        email: customer?.email ?? "",
+        phone: customer?.phone ?? "",
+        customerNumber: customer?.customerNumber ?? "",
+        customerId: customer?.customerNumber ?? customer?.customerId ?? customer?.id ?? ""
       });
 
       const order = normalizeOrder(payload?.order ?? payload);
@@ -373,7 +450,7 @@ export function createHttpCommerceProvider({
         return null;
       }
 
-      if (normalizeEmail(order.email) && normalizeEmail(order.email) !== normalizeEmail(customer.email)) {
+      if (!matchesOrderToCustomer(order, customer)) {
         return null;
       }
 

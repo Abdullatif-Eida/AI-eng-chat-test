@@ -9,6 +9,11 @@ import { createReadStream, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createChatbot } from "./lib/chatbot.js";
 import { createCommerceProviderFromEnv } from "./lib/commerceProvider.js";
+import {
+  createSessionRetentionStore,
+  readSessionRetentionValue,
+  writeSessionRetentionValue
+} from "./lib/sessionRetention.js";
 import { integrationMap } from "./integrations/index.js";
 import { createOrder, listOrders } from "./data/orders.js";
 import { products } from "./data/products.js";
@@ -24,8 +29,12 @@ const host = process.env.HOST || "127.0.0.1";
 const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
 const allowRequestScopedOpenRouterKey = process.env.ALLOW_CLIENT_OPENROUTER_KEY_OVERRIDE === "true";
 const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
-
-
+const trustedSessionOrders = createSessionRetentionStore(null, {
+  maxEntries: Number(process.env.MAX_TRUSTED_ORDER_SESSIONS || 256)
+});
+const trustedSessionOrdersTtlMs = Number(process.env.TRUSTED_ORDER_SESSION_TTL_MS || 30 * 60 * 1000);
+const maxTrustedOrdersPerSession = Number(process.env.MAX_TRUSTED_ORDERS_PER_SESSION || 20);
+const sessionIdPattern = /^[a-z0-9._:-]{8,120}$/i;
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -33,6 +42,13 @@ const contentTypes = {
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8"
 };
+
+class BadRequestError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BadRequestError";
+  }
+}
 
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
@@ -56,6 +72,35 @@ function readRequestBody(request) {
     });
     request.on("end", () => resolve(body));
     request.on("error", reject);
+  });
+}
+
+function parseJsonBody(rawBody = "") {
+  try {
+    return JSON.parse(rawBody || "{}");
+  } catch {
+    throw new BadRequestError("Request body must be valid JSON.");
+  }
+}
+
+function normalizeSessionId(value) {
+  const trimmed = String(value ?? "").trim();
+  return sessionIdPattern.test(trimmed) ? trimmed : crypto.randomUUID();
+}
+
+function readTrustedOrdersForSession(sessionId) {
+  return readSessionRetentionValue(trustedSessionOrders, sessionId) ?? [];
+}
+
+function rememberTrustedOrder(sessionId, order) {
+  const existingOrders = readTrustedOrdersForSession(sessionId);
+  const dedupedOrders = [
+    order,
+    ...existingOrders.filter((entry) => entry?.orderNumber !== order?.orderNumber)
+  ].slice(0, maxTrustedOrdersPerSession);
+
+  writeSessionRetentionValue(trustedSessionOrders, sessionId, dedupedOrders, {
+    ttlMs: trustedSessionOrdersTtlMs
   });
 }
 
@@ -154,14 +199,14 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === "POST" && requestUrl.pathname === "/api/chat") {
       const rawBody = await readRequestBody(request);
-      const parsed = JSON.parse(rawBody || "{}");
-      const sessionId = parsed.sessionId || crypto.randomUUID();
+      const parsed = parseJsonBody(rawBody);
+      const sessionId = normalizeSessionId(parsed.sessionId);
       const result = await chatbot.chat({
         sessionId,
         message: parsed.message ?? "",
         preferredLocale: parsed.preferredLocale === "ar" ? "ar" : "en",
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
+        knownOrders: readTrustedOrdersForSession(sessionId),
         openrouterApiKey: allowRequestScopedOpenRouterKey ? request.headers["x-openrouter-key"] : null
       });
 
@@ -174,15 +219,20 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === "POST" && requestUrl.pathname === "/api/orders") {
       const rawBody = await readRequestBody(request);
-      const parsed = JSON.parse(rawBody || "{}");
+      const parsed = parseJsonBody(rawBody);
+      const sessionId = normalizeSessionId(parsed.sessionId);
       const order = createOrder({
         customerName: parsed.customerName,
         email: parsed.email,
+        phone: parsed.phone,
+        customerNumber: parsed.customerNumber,
         items: parsed.items ?? [],
         locale: parsed.locale === "ar" ? "ar" : "en"
       });
+      rememberTrustedOrder(sessionId, order);
 
       sendJson(response, 201, {
+        sessionId,
         order
       });
       return;
@@ -191,12 +241,21 @@ const server = http.createServer(async (request, response) => {
     await serveStatic({ ...request, url: requestUrl.pathname }, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown server error";
-    const statusCode = message === "Request body too large" ? 413 : 500;
+    const statusCode =
+      error instanceof BadRequestError
+        ? 400
+        : message === "Request body too large"
+          ? 413
+          : /^Invalid order:/i.test(message)
+            ? 400
+            : 500;
     sendJson(response, statusCode, {
       error:
-        statusCode === 413
-          ? "Request body too large."
-          : "Internal server error."
+        statusCode === 400
+          ? message
+          : statusCode === 413
+            ? "Request body too large."
+            : "Internal server error."
     });
   }
 });

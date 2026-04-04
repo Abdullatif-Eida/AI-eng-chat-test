@@ -1,19 +1,36 @@
 const DEFAULT_MAX_ENTRIES = 64;
+const DEFAULT_MAX_VALUE_BYTES = 24 * 1024;
 
 function isManagedStore(value) {
   return value?.entries instanceof Map;
 }
 
-export function createSessionRetentionStore(existingStore, { maxEntries = DEFAULT_MAX_ENTRIES } = {}) {
+function measureRetentionValueBytes(value) {
+  try {
+    return Buffer.byteLength(JSON.stringify(value));
+  } catch {
+    return Buffer.byteLength(String(value ?? ""));
+  }
+}
+
+export function createSessionRetentionStore(
+  existingStore,
+  {
+    maxEntries = DEFAULT_MAX_ENTRIES,
+    maxValueBytes = DEFAULT_MAX_VALUE_BYTES
+  } = {}
+) {
   if (isManagedStore(existingStore)) {
     existingStore.maxEntries = Math.min(existingStore.maxEntries ?? maxEntries, maxEntries);
+    existingStore.maxValueBytes = Math.min(existingStore.maxValueBytes ?? maxValueBytes, maxValueBytes);
     return existingStore;
   }
 
   const entries = existingStore instanceof Map ? existingStore : new Map();
   return {
     entries,
-    maxEntries
+    maxEntries,
+    maxValueBytes
   };
 }
 
@@ -49,6 +66,11 @@ export function readSessionRetentionValue(storeInput, key, now = Date.now()) {
 export function writeSessionRetentionValue(storeInput, key, value, { ttlMs = null, now = Date.now() } = {}) {
   const store = createSessionRetentionStore(storeInput);
   pruneSessionRetentionStore(store, now);
+
+  if (measureRetentionValueBytes(value) > store.maxValueBytes) {
+    return value;
+  }
+
   store.entries.delete(key);
   store.entries.set(key, {
     value,

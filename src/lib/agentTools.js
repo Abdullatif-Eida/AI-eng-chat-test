@@ -14,6 +14,14 @@ function normalizeEmail(email = "") {
   return String(email).trim().toLowerCase();
 }
 
+function normalizePhone(phone = "") {
+  return String(phone).replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function normalizeCustomerReference(value = "") {
+  return String(value).trim().toUpperCase().replace(/\s+/g, "-").slice(0, 64);
+}
+
 function normalizeOrderNumber(orderNumber = "") {
   return String(orderNumber).trim().toUpperCase();
 }
@@ -26,6 +34,60 @@ function maskEmail(email = "") {
 
   const visible = localPart.slice(0, 2);
   return `${visible}${"*".repeat(Math.max(1, localPart.length - visible.length))}@${domain}`;
+}
+
+function maskPhone(phone = "") {
+  const normalized = normalizePhone(phone);
+  if (!normalized) {
+    return null;
+  }
+
+  const visiblePrefix = normalized.slice(0, Math.min(4, normalized.length));
+  const visibleSuffix = normalized.slice(-2);
+  const hiddenLength = Math.max(2, normalized.length - visiblePrefix.length - visibleSuffix.length);
+  return `${visiblePrefix}${"*".repeat(hiddenLength)}${visibleSuffix}`;
+}
+
+function maskCustomerReference(value = "") {
+  const normalized = normalizeCustomerReference(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.length <= 4) {
+    return `${normalized.slice(0, 1)}${"*".repeat(Math.max(1, normalized.length - 1))}`;
+  }
+
+  return `${normalized.slice(0, 2)}${"*".repeat(Math.max(2, normalized.length - 4))}${normalized.slice(-2)}`;
+}
+
+function hasVerifiedCustomerIdentity(customer) {
+  return Boolean(
+    normalizeCustomerReference(customer?.customerNumber ?? customer?.customerId ?? customer?.id) ||
+    normalizeEmail(customer?.email) ||
+    normalizePhone(customer?.phone)
+  );
+}
+
+function buildCustomerScope(customer, sessionId) {
+  const customerReference = normalizeCustomerReference(
+    customer?.customerNumber ?? customer?.customerId ?? customer?.id
+  );
+  if (customerReference) {
+    return `customer:${customerReference}`;
+  }
+
+  const email = normalizeEmail(customer?.email);
+  if (email) {
+    return `email:${email}`;
+  }
+
+  const phone = normalizePhone(customer?.phone);
+  if (phone) {
+    return `phone:${phone}`;
+  }
+
+  return `session:${sessionId}`;
 }
 
 function hashValue(value = "") {
@@ -91,8 +153,8 @@ function buildIdentityError(locale = "en") {
     code: "identity_required",
     message:
       locale === "ar"
-        ? "قبل مشاركة تفاصيل الطلب، أحتاج بريدك الإلكتروني أو ملف العميل المرتبط بهذه الجلسة."
-        : "Before I can share order details, I need the verified customer email or profile attached to this session."
+        ? "قبل مشاركة تفاصيل الطلب، أحتاج البريد الإلكتروني أو رقم الجوال أو رقم العميل الموثق المرتبط بهذه الجلسة."
+        : "Before I can share order details, I need the verified customer email, phone number, customer number, or profile attached to this session."
   };
 }
 
@@ -104,6 +166,17 @@ function buildOrderNotFound(orderNumber, locale = "en") {
       locale === "ar"
         ? `لم أتمكن من العثور على الطلب ${orderNumber}.`
         : `I couldn't find order ${orderNumber}.`
+  };
+}
+
+function buildOrderNumberRequired(locale = "en") {
+  return {
+    ok: false,
+    code: "order_number_required",
+    message:
+      locale === "ar"
+        ? "أحتاج رقم الطلب أولاً حتى أراجع حالة الطلب أو الإرجاع أو الإلغاء."
+        : "I need the order number first so I can check the order, return, or cancellation details."
   };
 }
 
@@ -132,8 +205,9 @@ export function createCommerceToolbox({
   const idempotency = createSessionRetentionStore(idempotencyStore, {
     maxEntries: MAX_IDEMPOTENCY_ENTRIES
   });
-  const customerScope = normalizeEmail(customer?.email) || `session:${sessionId}`;
+  const customerScope = buildCustomerScope(customer, sessionId);
   const identityScope = hashValue(customerScope);
+  const hasVerifiedCustomer = hasVerifiedCustomerIdentity(customer);
 
   async function runTool(name, args, handler) {
     try {
@@ -321,7 +395,15 @@ export function createCommerceToolbox({
             profile: {
               name: profile?.name ?? customer?.name ?? null,
               emailMasked: maskEmail(profile?.email ?? customer?.email),
+              phoneMasked: maskPhone(profile?.phone ?? customer?.phone),
+              customerReference: maskCustomerReference(
+                profile?.customerNumber ??
+                customer?.customerNumber ??
+                customer?.customerId ??
+                customer?.id
+              ),
               hasVerifiedEmail: Boolean(normalizeEmail(profile?.email ?? customer?.email)),
+              hasVerifiedIdentity: hasVerifiedCustomerIdentity(profile ?? customer),
               newsletter: Boolean(profile?.newsletter ?? customer?.newsletter),
               visibleOrderCount: visibleOrders.length
             },
@@ -368,7 +450,7 @@ export function createCommerceToolbox({
       case "list_customer_orders":
         return runTool(name, rawArgs, async () => {
           const visibleOrders = await commerceProvider.listVisibleOrders({ knownOrders, customer });
-          if (!normalizeEmail(customer?.email) && visibleOrders.length === 0) {
+          if (!hasVerifiedCustomer && visibleOrders.length === 0) {
             return buildIdentityError(locale);
           }
 
@@ -389,9 +471,13 @@ export function createCommerceToolbox({
       case "get_order_details":
         return runTool(name, rawArgs, async () => {
           const normalizedOrder = normalizeOrderNumber(rawArgs.orderNumber);
+          if (!normalizedOrder) {
+            return buildOrderNumberRequired(locale);
+          }
+
           const visibleOrders = await commerceProvider.listVisibleOrders({ knownOrders, customer });
 
-          if (!normalizeEmail(customer?.email) && visibleOrders.length === 0) {
+          if (!hasVerifiedCustomer && visibleOrders.length === 0) {
             return buildIdentityError(locale);
           }
 
@@ -399,12 +485,15 @@ export function createCommerceToolbox({
             scope: customerScope,
             key: `order:${normalizedOrder}`,
             ttlMs: 30 * 1000,
-            loader: () =>
-              commerceProvider.getOrder({
+            loader: async () => {
+              const order = await commerceProvider.getOrder({
                 knownOrders,
                 customer,
                 orderNumber: normalizedOrder
-              })
+              });
+
+              return order ? buildOrderSummary(order, locale, commerceProvider) : null;
+            }
           });
 
           if (!value) {
@@ -414,25 +503,30 @@ export function createCommerceToolbox({
           return {
             ok: true,
             cache: cacheStatus,
-            order: buildOrderSummary(value, locale, commerceProvider)
+            order: value
           };
         });
 
       case "get_return_options":
         return runTool(name, rawArgs, async () => {
-          const order = await commerceProvider.getOrder({
-            knownOrders,
-            customer,
-            orderNumber: rawArgs.orderNumber
-          });
+          const normalizedOrder = normalizeOrderNumber(rawArgs.orderNumber);
+          if (!normalizedOrder) {
+            return buildOrderNumberRequired(locale);
+          }
 
           const visibleOrders = await commerceProvider.listVisibleOrders({ knownOrders, customer });
-          if (!normalizeEmail(customer?.email) && visibleOrders.length === 0) {
+          if (!hasVerifiedCustomer && visibleOrders.length === 0) {
             return buildIdentityError(locale);
           }
 
+          const order = await commerceProvider.getOrder({
+            knownOrders,
+            customer,
+            orderNumber: normalizedOrder
+          });
+
           if (!order) {
-            return buildOrderNotFound(rawArgs.orderNumber, locale);
+            return buildOrderNotFound(normalizedOrder, locale);
           }
 
           const eligibility = commerceProvider.getReturnAssessment({ order, locale });
@@ -445,19 +539,24 @@ export function createCommerceToolbox({
 
       case "get_cancellation_options":
         return runTool(name, rawArgs, async () => {
-          const order = await commerceProvider.getOrder({
-            knownOrders,
-            customer,
-            orderNumber: rawArgs.orderNumber
-          });
+          const normalizedOrder = normalizeOrderNumber(rawArgs.orderNumber);
+          if (!normalizedOrder) {
+            return buildOrderNumberRequired(locale);
+          }
 
           const visibleOrders = await commerceProvider.listVisibleOrders({ knownOrders, customer });
-          if (!normalizeEmail(customer?.email) && visibleOrders.length === 0) {
+          if (!hasVerifiedCustomer && visibleOrders.length === 0) {
             return buildIdentityError(locale);
           }
 
+          const order = await commerceProvider.getOrder({
+            knownOrders,
+            customer,
+            orderNumber: normalizedOrder
+          });
+
           if (!order) {
-            return buildOrderNotFound(rawArgs.orderNumber, locale);
+            return buildOrderNotFound(normalizedOrder, locale);
           }
 
           return {

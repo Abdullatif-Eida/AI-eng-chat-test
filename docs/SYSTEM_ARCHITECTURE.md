@@ -17,9 +17,9 @@ That split is the core move away from a regex chatbot.
 
 ## High-Level Design
 
-### 1. OpenAI orchestration layer
+### 1. OpenRouter orchestration layer
 
-File: [src/lib/openai.js](/Users/abdullatifeida/abdullatif_eida/new/src/lib/openai.js)
+File: [src/lib/aiProvider.js](/Users/abdullatifeida/abdullatif_eida/new/src/lib/aiProvider.js)
 
 Responsibilities:
 
@@ -37,6 +37,12 @@ Important update:
 
 - the model now returns a strict structured reply contract
 - intent, confidence, and resolution metadata are no longer inferred from brittle post-processing rules
+- the default runtime is now tuned for `deepseek/deepseek-v3.2` on OpenRouter
+- simple turns keep reasoning disabled and output budgets tight for lower cost
+- more complex turns enable hidden reasoning plus required-parameter routing for stronger tool reliability
+- customer/profile/order/policy/handoff turns now use an app-enforced tool-choice guardrail, so sensitive support flows do not depend on the model spontaneously deciding to ground itself
+- simple public turns still prefer lower-cost provider routing, while more sensitive tool-heavy turns leave provider ordering open so OpenRouter can apply its stronger tool-calling routing defaults
+- external routing denies provider-side data collection by default and can require ZDR-compatible routing through environment flags
 
 ### 2. Support brain runtime
 
@@ -53,6 +59,7 @@ Why this matters:
 
 - the chatbot brain is now shaped as an explicit runtime contract, not scattered heuristics
 - edge-case behavior is easier to reason about, test, and evolve
+- prompt instructions stay mostly stable across turns, which is friendlier to OpenRouter prompt caching than re-sending dynamic summaries in the system prompt
 
 ### 3. External AI data protection gateway
 
@@ -67,6 +74,7 @@ Responsibilities:
 - resolve those tokens back to raw values only inside the trusted backend
 - keep session memory tokenized so raw emails and order numbers are not retained in model history
 - tokenize accidental bearer tokens and JWT-like secrets before outbound sharing
+- apply per-tool sharing contracts so only approved fields leave the trusted backend
 - redact secret-shaped object fields like `apiKey`, `accessToken`, `authorization`, and cookies before outbound sharing
 - cap nested depth, array size, object width, and string length before external-model sharing
 - hash analytics session references so debug views do not expose raw session identifiers
@@ -80,7 +88,7 @@ Examples:
 Why this matters:
 
 - the model can still reason over account/order flows without receiving raw identifiers
-- the app now has a dedicated outbound-sharing boundary instead of scattered redaction logic
+- the app now has a dedicated outbound-sharing boundary with explicit tool allowlists instead of scattered redaction logic
 - oversized or unexpectedly rich tool payloads cannot silently turn into retention or leakage risks
 
 ### 4. Tool layer
@@ -147,10 +155,13 @@ Current behavior:
 - session TTL: 30 minutes
 - max remembered history: 16 entries
 - max stored analytics events: 200
+- retained cache/idempotency values are also size-bounded, so oversized payloads are dropped instead of quietly inflating memory use
 - input message length is capped before processing
 - shopper identity switches reset tokenized history, cache, and idempotency state inside the same session
 - session analytics use hashed `sessionRef` values instead of raw `sessionId`
 - cache and handoff state live in bounded retention-aware stores so long sessions do not grow indefinitely
+- order-detail cache stores minimized order summaries instead of raw provider objects
+- HTTP entrypoints now keep a server-managed, TTL-bounded list of session-created demo orders so the browser does not have to send untrusted `knownOrders` back into the trusted AI path
 
 ### 7. UI layer
 

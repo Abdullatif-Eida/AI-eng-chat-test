@@ -27,13 +27,17 @@ For local development:
 
 ```bash
 export OPENROUTER_API_KEY="your_openrouter_key_here"
-export OPENROUTER_MODEL="openrouter/free"
+export OPENROUTER_MODEL="deepseek/deepseek-v3.2"
 ```
 
 For Netlify:
 
 - Set `OPENROUTER_API_KEY` in the Netlify site environment variables.
 - You can also use `NETLIFY_OPENROUTER_API_KEY` if you want a Netlify-specific secret name.
+- Optional: override `OPENROUTER_CHEAP_MODEL` or `OPENROUTER_COMPLEX_MODEL` if you want explicit tiering.
+- Optional: set `OPENROUTER_DATA_COLLECTION=allow` only if you intentionally want broader provider routing. The default is `deny` for stricter external-sharing hygiene.
+- Optional: set `OPENROUTER_PROVIDER_SORT=price` (default) or another supported OpenRouter provider sort if you want to change the routing tradeoff.
+- Optional: set `OPENROUTER_REQUIRE_ZDR=true` if you want to require OpenRouter zero-data-retention-compatible routing.
 - Do not expose the key in client-side code.
 
 To connect real commerce systems instead of the seeded provider, you can also set:
@@ -75,9 +79,13 @@ npm test
 - This project is designed to be reviewed from source code directly, including a zip or shared folder.
 - `npm start` builds the frontend bundle and starts the local server on port `3000`.
 - The chatbot is OpenRouter-only and requires a valid server-side OpenRouter key.
-- The default model is `openrouter/free`, so the app stays on OpenRouter's zero-cost router unless you explicitly override `OPENROUTER_MODEL`.
+- The default model is `deepseek/deepseek-v3.2`, which gives better tool use, longer context, and lower per-token cost than the older generic free-router default.
+- Simple turns run with a tighter output budget and no reasoning; more complex support turns enable hidden reasoning to improve judgment without exposing chain-of-thought to shoppers.
+- OpenRouter routing is now cost-aware by default with provider sorting set to `price`, while still keeping tool parameters strict.
+- External model routing now denies provider-side data collection by default, and can optionally require ZDR-compatible routing for stricter deployments.
 - The recommended production setup is a Netlify environment variable, not a browser-exposed key.
 - If `COMMERCE_API_BASE_URL` is configured, the tool layer will use your real commerce APIs; otherwise it uses the seeded provider bundled with the project.
+- The browser no longer sends `knownOrders` back into the trusted AI route. Session-created demo orders are remembered server-side, which closes an important trust-boundary gap.
 
 ## What is included
 

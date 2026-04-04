@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createChatbot } from "../src/lib/chatbot.js";
+import { createOrder } from "../src/data/orders.js";
+import {
+  createSessionRetentionStore,
+  readSessionRetentionValue,
+  writeSessionRetentionValue
+} from "../src/lib/sessionRetention.js";
 
 const ORDER_IDENTIFIER_PATTERN = /(?:\[\[order_\d+\]\]|[A-Z]{1,4}-\d+)/i;
 
@@ -142,13 +148,13 @@ function planToolCall(message = "") {
 
 function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
   if (toolName === "get_customer_profile") {
-    if (!toolOutput.profile?.hasVerifiedEmail) {
+    if (!toolOutput.profile?.hasVerifiedIdentity) {
       return buildStructuredReply({
         intent: "customer_profile",
-        reply: "I do not have a verified shopper profile on this session yet. Share your name and email and I’ll use them for future order support.",
+        reply: "I do not have a verified shopper profile on this session yet. Share your name plus an email, phone number, or customer number and I’ll use them for future order support.",
         confidence: 0.84,
         resolution: "clarification_needed",
-        customerAction: "Share your name and verified email."
+        customerAction: "Share your name and at least one verified contact detail."
       });
     }
 
@@ -156,10 +162,15 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
     const latestOrderLine = latestOrder
       ? ` Your latest visible order is ${latestOrder.orderNumber} and it is ${latestOrder.status}. Would you like me to track it, explain the status, or help with a return?`
       : "";
+    const savedDetails = [
+      toolOutput.profile.emailMasked,
+      toolOutput.profile.phoneMasked,
+      toolOutput.profile.customerReference
+    ].filter(Boolean).join(", ");
 
     return buildStructuredReply({
       intent: "customer_profile",
-      reply: `I have ${toolOutput.profile.name || "your shopper profile"} saved with ${toolOutput.profile.emailMasked}.${latestOrderLine}`,
+      reply: `I have ${toolOutput.profile.name || "your shopper profile"} saved with ${savedDetails}.${latestOrderLine}`,
       confidence: 0.92
     });
   }
@@ -200,10 +211,17 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
         intent: "order_tracking",
         reply: toolOutput.message,
         confidence: toolOutput.code === "identity_required" ? 0.7 : 0.76,
-        resolution: toolOutput.code === "identity_required" ? "identity_required" : "fallback",
+        resolution:
+          toolOutput.code === "identity_required"
+            ? "identity_required"
+            : toolOutput.code === "order_number_required"
+              ? "order_number_required"
+              : "fallback",
         customerAction:
           toolOutput.code === "identity_required"
-            ? "Share the verified email on the order."
+            ? "Share the verified email, phone number, or customer number on the order."
+            : toolOutput.code === "order_number_required"
+              ? "Share the order number you want checked."
             : "Double-check the order number or ask for a human agent."
       });
     }
@@ -229,7 +247,7 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
         reply: toolOutput.message,
         confidence: 0.7,
         resolution: toolOutput.code === "identity_required" ? "identity_required" : "fallback",
-        customerAction: "Share the verified email on the order."
+        customerAction: "Share the verified email, phone number, or customer number on the order."
       });
     }
 
@@ -256,8 +274,18 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
       intent: "returns_refunds",
       reply: toolOutput.ok ? toolOutput.eligibility.reason : toolOutput.message,
       confidence: toolOutput.ok ? 0.9 : 0.75,
-      resolution: toolOutput.ok ? "answered" : "fallback",
-      customerAction: toolOutput.ok ? "" : "Share the order number or ask for a human agent."
+      resolution:
+        toolOutput.ok
+          ? "answered"
+          : toolOutput.code === "order_number_required"
+            ? "order_number_required"
+            : "fallback",
+      customerAction:
+        toolOutput.ok
+          ? ""
+          : toolOutput.code === "order_number_required"
+            ? "Share the order number you want checked."
+            : "Share the order number or ask for a human agent."
     });
   }
 
@@ -268,8 +296,18 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
         ? `I checked order ${toolOutput.order.orderNumber}. ${toolOutput.cancellation.reason}`
         : toolOutput.message,
       confidence: toolOutput.ok ? 0.9 : 0.75,
-      resolution: toolOutput.ok ? "answered" : "fallback",
-      customerAction: toolOutput.ok ? "" : "Share the order number or ask for a human agent."
+      resolution:
+        toolOutput.ok
+          ? "answered"
+          : toolOutput.code === "order_number_required"
+            ? "order_number_required"
+            : "fallback",
+      customerAction:
+        toolOutput.ok
+          ? ""
+          : toolOutput.code === "order_number_required"
+            ? "Share the order number you want checked."
+            : "Share the order number or ask for a human agent."
     });
   }
 
@@ -365,6 +403,15 @@ function createMockOpenRouterFetch() {
   };
 }
 
+function createCapturingOpenRouterFetch(recordedBodies) {
+  const delegate = createMockOpenRouterFetch();
+
+  return async (url, options) => {
+    recordedBodies.push(JSON.parse(options.body));
+    return delegate(url, options);
+  };
+}
+
 async function withMockedOpenRouter(run, fetchImpl = createMockOpenRouterFetch()) {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
@@ -399,6 +446,162 @@ test("uses OpenRouter tool-calling to answer product questions", async () => {
   });
 });
 
+test("defaults to DeepSeek V3.2 instead of a generic free router", () => {
+  const bot = createChatbot();
+  const status = bot.getAIMode();
+
+  assert.equal(status.provider, "openrouter");
+  assert.equal(status.model, "deepseek/deepseek-v3.2");
+  assert.equal(status.freeOnly, false);
+});
+
+test("sends a low-cost DeepSeek request profile for simple turns", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "deepseek-simple-profile",
+      message: "Tell me about the Wireless Mouse"
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const firstBody = bodies[0];
+  assert.equal(firstBody.model, "deepseek/deepseek-v3.2");
+  assert.equal(firstBody.temperature, 0.2);
+  assert.equal(firstBody.max_output_tokens, 450);
+  assert.equal(firstBody.tool_choice, "auto");
+  assert.equal(firstBody.provider?.require_parameters, true);
+  assert.equal(firstBody.provider?.data_collection, "deny");
+  assert.equal(firstBody.provider?.sort, "price");
+  assert.equal(firstBody.reasoning?.enabled, false);
+  assert.match(firstBody.user, /^support_[a-f0-9]{24}$/);
+  assert.doesNotMatch(firstBody.instructions, /Recent conversation|Current shopper context/i);
+});
+
+test("forces tool usage for sensitive order and profile turns", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "guardrailed-profile-turn",
+      message: "Check my saved profile",
+      customerProfile: {
+        email: "maha@example.com"
+      }
+    });
+
+    await bot.chat({
+      sessionId: "guardrailed-order-turn",
+      message: "Where is my order KS-10421?",
+      customerProfile: {
+        email: "maha@example.com"
+      }
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const initialBodies = bodies.filter((body) =>
+    !(body.input ?? []).some((item) => item?.type === "function_call_output")
+  );
+
+  assert.equal(initialBodies[0].tool_choice?.type, "function");
+  assert.equal(initialBodies[0].tool_choice?.name, "get_customer_profile");
+  assert.equal(initialBodies[0].provider?.sort, undefined);
+  assert.equal(initialBodies[1].tool_choice?.type, "function");
+  assert.equal(initialBodies[1].tool_choice?.name, "get_order_details");
+  assert.equal(initialBodies[1].provider?.sort, undefined);
+  assert.equal(initialBodies[1].max_tool_calls, 6);
+});
+
+test("requires a tool call for ambiguous post-order turns instead of leaving them fully optional", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "guardrailed-ambiguous-return",
+      message: "I need a refund",
+      customerProfile: {
+        email: "faisal@example.com"
+      }
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const initialBody = bodies.find((body) =>
+    !(body.input ?? []).some((item) => item?.type === "function_call_output")
+  );
+
+  assert.equal(initialBody.tool_choice, "required");
+  assert.equal(initialBody.provider?.sort, undefined);
+  assert.equal(initialBody.max_tool_calls, 6);
+});
+
+test("enables hidden reasoning for more complex DeepSeek support turns", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "deepseek-complex-profile",
+      message: "Please review my profile and latest order, then tell me the best next step if I want either a refund or a cancellation depending on what is still possible.",
+      customerProfile: {
+        name: "Maha Alharbi",
+        email: "maha@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10555",
+          customerName: "Maha Alharbi",
+          email: "maha@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const firstBody = bodies[0];
+  assert.equal(firstBody.model, "deepseek/deepseek-v3.2");
+  assert.equal(firstBody.temperature, 0.15);
+  assert.equal(firstBody.max_output_tokens, 1200);
+  assert.equal(firstBody.provider?.require_parameters, true);
+  assert.equal(firstBody.provider?.data_collection, "deny");
+  assert.equal(firstBody.provider?.sort, undefined);
+  assert.equal(firstBody.reasoning?.enabled, true);
+  assert.equal(firstBody.reasoning?.exclude, true);
+});
+
+test("can require OpenRouter zero-data-retention routing for stricter deployments", async () => {
+  const previousRequireZdr = process.env.OPENROUTER_REQUIRE_ZDR;
+  const bodies = [];
+  process.env.OPENROUTER_REQUIRE_ZDR = "true";
+
+  try {
+    await withMockedOpenRouter(async () => {
+      const bot = createChatbot();
+      await bot.chat({
+        sessionId: "deepseek-zdr-profile",
+        message: "Tell me about the Wireless Mouse"
+      });
+    }, createCapturingOpenRouterFetch(bodies));
+
+    const firstBody = bodies[0];
+    assert.equal(firstBody.provider?.zdr, true);
+  } finally {
+    if (previousRequireZdr === undefined) {
+      delete process.env.OPENROUTER_REQUIRE_ZDR;
+    } else {
+      process.env.OPENROUTER_REQUIRE_ZDR = previousRequireZdr;
+    }
+  }
+});
+
 test("requires verified identity before exposing order data", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();
@@ -408,7 +611,7 @@ test("requires verified identity before exposing order data", async () => {
     });
 
     assert.equal(result.intent, "order_tracking");
-    assert.match(result.reply, /verified customer email/i);
+    assert.match(result.reply, /verified customer (email|email, phone number, customer number)|profile attached to this session/i);
     assert.doesNotMatch(result.reply, /Out for delivery|Aramex|Maha/);
   });
 });
@@ -459,7 +662,7 @@ test("does not let prompt-injection wording bypass order access controls", async
     });
 
     assert.equal(result.intent, "order_tracking");
-    assert.match(result.reply, /verified customer email/i);
+    assert.match(result.reply, /verified customer (email|email, phone number, customer number)|profile attached to this session/i);
     assert.doesNotMatch(result.reply, /Out for delivery|Aramex|Maha/);
   });
 });
@@ -611,6 +814,43 @@ test("checks the saved shopper profile through the tool layer instead of guessin
   });
 });
 
+test("surfaces saved phone and customer number from the session-backed shopper profile", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "profile-with-phone-and-reference",
+      message: "Check my saved profile",
+      customerProfile: {
+        name: "Maha Alharbi",
+        email: "maha@example.com",
+        phone: "+966500112233",
+        customerNumber: "CUST-1024"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10555",
+          customerName: "Maha Alharbi",
+          email: "maha@example.com",
+          phone: "+966500112233",
+          customerNumber: "CUST-1024",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(result.intent, "customer_profile");
+    assert.match(result.reply, /ma\*+@example\.com/i);
+    assert.match(result.reply, /\+966\*+/i);
+    assert.match(result.reply, /CU\*+24/i);
+    assert.match(result.reply, /KS-10555/);
+  });
+});
+
 test("keeps Arabic replies when the shopper writes in Arabic", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();
@@ -744,6 +984,51 @@ test("uses the newest visible order when the shopper asks for the latest order",
   });
 });
 
+test("does not treat anonymous browser-provided orders as verified order access", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "anonymous-known-orders-blocked",
+      message: "Where is my latest order?",
+      knownOrders: [
+        {
+          orderNumber: "KS-19991",
+          customerName: "Anonymous Shopper",
+          email: "anonymous@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku001-wireless-mouse", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(result.intent, "order_tracking");
+    assert.match(result.reply, /verified customer email|profile attached to this session/i);
+    assert.doesNotMatch(result.reply, /KS-19991|Processing|Pending assignment/);
+  });
+});
+
+test("asks for an order number instead of pretending a refund request simply failed lookup", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "refund-needs-order-number",
+      message: "I need a refund",
+      customerProfile: {
+        name: "Faisal Alotaibi",
+        email: "faisal@example.com"
+      }
+    });
+
+    assert.equal(result.intent, "returns_refunds");
+    assert.equal(result.structured?.resolution, "order_number_required");
+    assert.match(result.reply, /need the order number first/i);
+  });
+});
+
 test("returns a clear configuration error when the OpenRouter key is missing", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   delete process.env.OPENROUTER_API_KEY;
@@ -752,7 +1037,7 @@ test("returns a clear configuration error when the OpenRouter key is missing", a
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "no-key",
-      message: "Tell me about the Mechanical Keyboard"
+      message: "What can you help me with?"
     });
 
     assert.equal(result.intent, "configuration_error");
@@ -761,6 +1046,73 @@ test("returns a clear configuration error when the OpenRouter key is missing", a
     if (previousKey !== undefined) {
       process.env.OPENROUTER_API_KEY = previousKey;
     }
+  }
+});
+
+test("returns grounded product details without depending on a model tool-choice step", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  delete process.env.OPENROUTER_API_KEY;
+  global.fetch = async () => {
+    throw new Error("fetch should not be called for deterministic catalog lookups");
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "deterministic-product-details",
+      message: "Tell me about the Wireless Mouse"
+    });
+
+    assert.equal(result.intent, "product_information");
+    assert.match(result.reply, /Wireless Mouse/);
+    assert.match(result.reply, /27\.29 SAR/);
+    assert.match(result.reply, /Ergonomic wireless mouse/);
+    assert.match(result.reply, /In stock/i);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("resolves follow-up product detail requests from recent catalog context", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  delete process.env.OPENROUTER_API_KEY;
+  global.fetch = async () => {
+    throw new Error("fetch should not be called for deterministic follow-up catalog lookups");
+  };
+
+  try {
+    const bot = createChatbot();
+    const first = await bot.chat({
+      sessionId: "deterministic-product-follow-up",
+      message: "Tell me about the Wireless Mouse"
+    });
+    const second = await bot.chat({
+      sessionId: "deterministic-product-follow-up",
+      message: "ok give me the details of it plz"
+    });
+
+    assert.equal(first.intent, "product_information");
+    assert.equal(second.intent, "product_information");
+    assert.match(second.reply, /Wireless Mouse/);
+    assert.match(second.reply, /27\.29 SAR/);
+    assert.match(second.reply, /Black/);
+    assert.match(second.reply, /Medium/);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
   }
 });
 
@@ -795,7 +1147,38 @@ test("sanitizes quoted and whitespace-padded OpenRouter keys before sending requ
   }
 });
 
-test("defaults to the OpenRouter free router", async () => {
+test("disables provider-side response retention when calling OpenRouter", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  const upstreamFetch = createMockOpenRouterFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    assert.equal(body.store, false);
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "store-false",
+      message: "What can you help me with?"
+    });
+
+    assert.equal(result.intent, "catalog_browse");
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("uses DeepSeek V3.2 as the default OpenRouter model", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousModel = process.env.OPENROUTER_MODEL;
   const previousFetch = global.fetch;
@@ -818,9 +1201,9 @@ test("defaults to the OpenRouter free router", async () => {
     });
 
     assert.equal(result.intent, "product_information");
-    assert.ok(requestedModels.every((model) => model === "openrouter/free"));
+    assert.ok(requestedModels.every((model) => model === "deepseek/deepseek-v3.2"));
     assert.equal(bot.getAIMode().provider, "openrouter");
-    assert.equal(bot.getAIMode().freeOnly, true);
+    assert.equal(bot.getAIMode().freeOnly, false);
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;
@@ -893,7 +1276,7 @@ test("keeps the configured OpenRouter free model across same-session follow-up t
   }
 });
 
-test("retries without strict schema when a free model rejects structured output", async () => {
+test("retries without strict schema when a model rejects structured output", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
   process.env.OPENROUTER_API_KEY = "test-key";
@@ -919,11 +1302,10 @@ test("retries without strict schema when a free model rejects structured output"
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "schema-retry",
-      message: "Tell me about the Mechanical Keyboard"
+      message: "What can you help me with?"
     });
 
-    assert.equal(result.intent, "product_information");
-    assert.match(result.reply, /Mechanical Keyboard/);
+    assert.equal(result.intent, "catalog_browse");
     assert.ok(schemaAttempts >= 1);
 
     const analytics = bot.getAnalytics();
@@ -939,7 +1321,7 @@ test("retries without strict schema when a free model rejects structured output"
   }
 });
 
-test("returns a shopper-safe message when the free OpenRouter path is rate limited", async () => {
+test("returns a shopper-safe message when the OpenRouter path is rate limited", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
   process.env.OPENROUTER_API_KEY = "test-key";
@@ -1173,7 +1555,7 @@ test("expires session memory so customer identity is not retained indefinitely",
     });
 
     assert.equal(second.intent, "order_tracking");
-    assert.match(second.reply, /verified customer email/i);
+    assert.match(second.reply, /verified customer (email|email, phone number, customer number)|profile attached to this session/i);
   });
 });
 
@@ -1204,7 +1586,7 @@ test("resets protected history and retention stores when the verified shopper id
 
     await bot.chat({
       sessionId: "identity-reset",
-      message: "Tell me about the Mechanical Keyboard",
+      message: "What can you help me with?",
       customerProfile: {
         email: "other@example.com"
       }
@@ -1214,6 +1596,47 @@ test("resets protected history and retention stores when the verified shopper id
   assert.equal(initialInputs.length, 2);
   assert.equal(initialInputs[0].length, 1);
   assert.equal(initialInputs[1].length, 1);
+});
+
+test("keeps protected history when the same shopper adds phone or customer number later in the session", async () => {
+  const initialInputs = [];
+  const upstreamFetch = createMockOpenRouterFetch();
+
+  const customFetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    const hasToolOutput = (body.input ?? []).some((item) => item?.type === "function_call_output");
+    if (!hasToolOutput) {
+      initialInputs.push(body.input);
+    }
+
+    return upstreamFetch(_url, options);
+  };
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "identity-enrichment",
+      message: "Where is my order KS-10421?",
+      customerProfile: {
+        email: "maha@example.com"
+      }
+    });
+
+    await bot.chat({
+      sessionId: "identity-enrichment",
+      message: "What can you help me with?",
+      customerProfile: {
+        email: "maha@example.com",
+        phone: "+966500112233",
+        customerNumber: "CUST-1024"
+      }
+    });
+  }, customFetch);
+
+  assert.equal(initialInputs.length, 2);
+  assert.equal(initialInputs[0].length, 1);
+  assert.ok(initialInputs[1].length > 1);
 });
 
 test("bounds oversized shopper messages before sending them to OpenRouter", async () => {
@@ -1319,7 +1742,7 @@ test("tokenizes sensitive order and email values before sharing context with Ope
   }
 });
 
-test("redacts secret-shaped tool fields and truncates oversized tool payloads before OpenRouter sees them", async () => {
+test("allowlists tool payloads before OpenRouter sees them", async () => {
   const forwardedToolPayloads = [];
   const upstreamFetch = createMockOpenRouterFetch();
 
@@ -1347,12 +1770,14 @@ test("redacts secret-shaped tool fields and truncates oversized tool payloads be
             id: "secure-product",
             name: "Secure Travel Hub",
             category: "Adapters",
-            shortDescription: "Safe catalog result for testing the external-sharing boundary.",
+            shortDescription: `Safe catalog result ${"H".repeat(1600)}`,
             priceSar: 149,
             currency: "SAR",
             accessToken: "super-secret-access-token",
             apiKey: "provider-secret-key",
-            rawHtml: "H".repeat(1600)
+            rawHtml: "H".repeat(1600),
+            internalNotes: "do-not-share",
+            warehouseBin: "A-14"
           }
         };
       },
@@ -1382,7 +1807,7 @@ test("redacts secret-shaped tool fields and truncates oversized tool payloads be
     const bot = createChatbot({ commerceProvider: provider });
     await bot.chat({
       sessionId: "external-sharing-hardening",
-      message: "Tell me about the travel hub"
+      message: "hello there"
     });
   }, customFetch);
 
@@ -1390,10 +1815,12 @@ test("redacts secret-shaped tool fields and truncates oversized tool payloads be
   const forwarded = forwardedToolPayloads.join("\n");
   assert.doesNotMatch(forwarded, /super-secret-access-token/);
   assert.doesNotMatch(forwarded, /provider-secret-key/);
-  assert.match(forwarded, /"accessToken":"\[redacted\]"/);
-  assert.match(forwarded, /"apiKey":"\[redacted\]"/);
   assert.doesNotMatch(forwarded, /H{900}/);
+  assert.doesNotMatch(forwarded, /rawHtml/);
+  assert.doesNotMatch(forwarded, /internalNotes/);
+  assert.doesNotMatch(forwarded, /warehouseBin/);
   assert.match(forwarded, /\[truncated\]/);
+  assert.match(forwarded, /"shortDescription":"Safe catalog result/);
 });
 
 test("stores analytics with hashed session references instead of raw session ids", async () => {
@@ -1456,5 +1883,58 @@ test("builds analytics summaries for containment and journey mix", async () => {
     assert.equal(summary.postPurchaseTurns, 1);
     assert.equal(summary.accountSupportTurns, 1);
     assert.equal(summary.containedTurns, 3);
+  });
+});
+
+test("does not retain oversized values in bounded session stores", () => {
+  const store = createSessionRetentionStore(null, {
+    maxEntries: 4,
+    maxValueBytes: 128
+  });
+
+  writeSessionRetentionValue(store, "small", {
+    answer: "ok"
+  });
+  writeSessionRetentionValue(store, "large", {
+    blob: "x".repeat(512)
+  });
+
+  assert.deepEqual(readSessionRetentionValue(store, "small"), {
+    answer: "ok"
+  });
+  assert.equal(readSessionRetentionValue(store, "large"), null);
+});
+
+test("rejects invalid orders instead of creating empty or unknown-item records", () => {
+  assert.throws(
+    () =>
+      createOrder({
+        customerName: "Demo Shopper",
+        email: "demo@example.com",
+        items: [{ productId: "unknown-sku", quantity: 2 }]
+      }),
+    /Invalid order: at least one valid cart item is required\./i
+  );
+});
+
+test("normalizes created orders so duplicate items and excessive quantities are bounded", () => {
+  const order = createOrder({
+    customerName: "Demo Shopper",
+    email: "demo@example.com",
+    items: [
+      { productId: "sku001-wireless-mouse", quantity: 9 },
+      { productId: "sku001-wireless-mouse", quantity: 7 },
+      { productId: "sku002-mechanical-keyboard", quantity: 1 }
+    ]
+  });
+
+  assert.equal(order.items.length, 2);
+  assert.deepEqual(order.items[0], {
+    productId: "sku001-wireless-mouse",
+    quantity: 10
+  });
+  assert.deepEqual(order.items[1], {
+    productId: "sku002-mechanical-keyboard",
+    quantity: 1
   });
 });

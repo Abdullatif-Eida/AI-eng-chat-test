@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { createCommerceToolbox } from "./agentTools.js";
+import { findProduct } from "./commerce.js";
 import {
   detokenizeValue,
   tokenizeValue
@@ -17,8 +19,28 @@ import {
 } from "./supportBrain.js";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/responses";
-const DEFAULT_OPENROUTER_MODEL = "openrouter/free";
+const DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v3.2";
 const MAX_TOOL_STEPS = 6;
+const ORDER_NUMBER_PATTERN = /\b[A-Z]{1,4}-\d+\b/i;
+const CATALOG_FOLLOW_UP_PATTERN =
+  /(?:details?|specs?|specifications?|features?|price|availability|colors?|size|tell me more|more info|more information|it|this one|that one|تفاصيل|مواصفات|سعر|التوفر|ألوان|الوان|مقاس|المزيد|هذا المنتج|هذا|هالمنتج)/i;
+const RECOMMENDATION_PATTERN = /(?:recommend|best|top|travel|gift|رشح|أفضل|افضل|أنسب|انسب|للسفر|هدية)/i;
+const CATALOG_BROWSE_PATTERN = /(?:products|catalog|browse|show me products|اعرض المنتجات|منتجات|الكتالوج|الفئات)/i;
+const NON_CATALOG_PATTERN =
+  /(?:where is my order|latest order|most recent order|last order|track|shipment|order\b|refund|return|cancel|change address|privacy|terms|payment|human|agent|profile|account|طلبي|آخر طلب|أحدث طلب|تتبع|استرجاع|استرداد|إلغاء|الغاء|الخصوصية|الشروط|الدفع|موظف|خدمة العملاء|حسابي|ملفي)/i;
+const PROFILE_PATTERN =
+  /(?:my profile|my account|saved profile|profile on file|check my profile|check my account|what email|which email|what phone|which phone|customer number on file|saved customer number|ملفي|حسابي|البريد المحفوظ|رقم الجوال المحفوظ|رقم العميل المحفوظ|الملف المحفوظ)/i;
+const LATEST_ORDER_PATTERN =
+  /(?:latest order|most recent order|last order|newest order|where is my latest order|where is my most recent order|my latest order|my most recent order|آخر طلب|أحدث طلب|آخر طلب لي|أحدث طلب لي)/i;
+const ORDER_TRACKING_PATTERN =
+  /(?:where is my order|track|tracking|shipment|delivery status|order status|status of my order|my order status|my order|طلبي|تتبع|الشحنة|حالة الطلب)/i;
+const RETURN_PATTERN = /(?:refund|return|exchange|استرجاع|استرداد|إرجاع|ارجاع)/i;
+const CANCELLATION_PATTERN =
+  /(?:cancel|cancellation|change address|edit order|modify order|update order|إلغاء|الغاء|تعديل العنوان|تعديل الطلب)/i;
+const POLICY_PATTERN =
+  /(?:privacy|data retention|terms|shipping|payment|payments|cookie|cookies|returns policy|refund policy|contact|الخصوصية|البيانات|الاحتفاظ بالبيانات|الشروط|الشحن|الدفع|الدفع|الكوكيز|سياسة الاسترجاع|سياسة الإرجاع|التواصل)/i;
+const HUMAN_HANDOFF_PATTERN =
+  /(?:human|agent|representative|support team|real person|موظف|ممثل خدمة|خدمة العملاء|فريق الدعم)/i;
 
 class OpenRouterRequestError extends Error {
   constructor(message, { status = null, responseText = "" } = {}) {
@@ -140,12 +162,69 @@ function buildFunctionCallInput(call = {}) {
   return input;
 }
 
+function buildForcedFunctionToolChoice(name) {
+  return {
+    type: "function",
+    name
+  };
+}
+
+function extractOrderNumber(message = "") {
+  return String(message).match(ORDER_NUMBER_PATTERN)?.[0] ?? null;
+}
+
+function buildGuardrailedToolChoice(message = "") {
+  const trimmed = String(message).trim();
+  if (!trimmed) {
+    return "auto";
+  }
+
+  const orderNumber = extractOrderNumber(trimmed);
+
+  if (HUMAN_HANDOFF_PATTERN.test(trimmed)) {
+    return buildForcedFunctionToolChoice("create_handoff");
+  }
+
+  if (PROFILE_PATTERN.test(trimmed)) {
+    return buildForcedFunctionToolChoice("get_customer_profile");
+  }
+
+  if (LATEST_ORDER_PATTERN.test(trimmed)) {
+    return buildForcedFunctionToolChoice("list_customer_orders");
+  }
+
+  if (RETURN_PATTERN.test(trimmed)) {
+    return orderNumber
+      ? buildForcedFunctionToolChoice("get_return_options")
+      : "required";
+  }
+
+  if (CANCELLATION_PATTERN.test(trimmed)) {
+    return orderNumber
+      ? buildForcedFunctionToolChoice("get_cancellation_options")
+      : "required";
+  }
+
+  if (POLICY_PATTERN.test(trimmed)) {
+    return buildForcedFunctionToolChoice("get_policy_information");
+  }
+
+  if (ORDER_TRACKING_PATTERN.test(trimmed)) {
+    return orderNumber
+      ? buildForcedFunctionToolChoice("get_order_details")
+      : "required";
+  }
+
+  return "auto";
+}
+
 function buildAgentRequestBody({
   model,
   instructions,
   input,
   tools,
-  useStructuredOutput
+  useStructuredOutput,
+  requestOptions
 }) {
   return {
     model,
@@ -153,6 +232,8 @@ function buildAgentRequestBody({
     input,
     tools,
     ...(useStructuredOutput ? { text: buildSupportResponseFormat() } : {}),
+    ...requestOptions,
+    store: false,
     truncation: "auto",
     parallel_tool_calls: false
   };
@@ -185,6 +266,7 @@ async function requestAgentTurn({
   instructions,
   input,
   tools,
+  requestOptions,
   track,
   sessionId,
   locale
@@ -194,7 +276,8 @@ async function requestAgentTurn({
     instructions,
     input,
     tools,
-    useStructuredOutput: true
+    useStructuredOutput: true,
+    requestOptions
   });
 
   try {
@@ -222,7 +305,8 @@ async function requestAgentTurn({
         instructions,
         input,
         tools,
-        useStructuredOutput: false
+        useStructuredOutput: false,
+        requestOptions
       })
     });
   }
@@ -243,11 +327,11 @@ function classifyProviderFailure(error, locale = "en") {
   ) {
     return locale === "ar"
       ? {
-          reply: "خدمة الدعم الذكية المجانية مزدحمة أو محدودة حالياً على OpenRouter. حاول مرة أخرى بعد قليل.",
+          reply: "خدمة الدعم الذكية على OpenRouter مزدحمة أو محدودة حالياً. حاول مرة أخرى بعد قليل.",
           customerAction: "أعد المحاولة بعد قليل."
         }
       : {
-          reply: "The free AI support service on OpenRouter is busy or rate limited right now. Please try again shortly.",
+          reply: "The AI support service on OpenRouter is busy or rate limited right now. Please try again shortly.",
           customerAction: "Wait a little, then try again."
         };
   }
@@ -273,11 +357,11 @@ function classifyProviderFailure(error, locale = "en") {
   if (haystack.includes("model") && (haystack.includes("not found") || haystack.includes("not have access") || haystack.includes("does not exist"))) {
     return locale === "ar"
       ? {
-          reply: "خدمة الدعم الذكية غير مهيأة بشكل صحيح الآن لأن نموذج OpenRouter المجاني المختار غير متاح.",
-          customerAction: "تحقق من إعداد النموذج المجاني على OpenRouter ثم أعد المحاولة."
+          reply: "خدمة الدعم الذكية غير مهيأة بشكل صحيح الآن لأن نموذج OpenRouter المختار غير متاح.",
+          customerAction: "تحقق من إعداد نموذج OpenRouter ثم أعد المحاولة."
         }
       : {
-          reply: "The AI support service is misconfigured right now because the selected OpenRouter free model is unavailable.",
+          reply: "The AI support service is misconfigured right now because the selected OpenRouter model is unavailable.",
           customerAction: "Check the configured OpenRouter model, then try again."
         };
   }
@@ -309,6 +393,297 @@ function sanitizeApiKey(rawValue) {
   return unwrapped || null;
 }
 
+function normalizeHistoryForPlanning(history = [], boundary) {
+  return history.map((entry) => ({
+    role: entry.role,
+    content: String(detokenizeValue(entry.content, boundary) ?? "")
+  }));
+}
+
+function hasVerifiedCustomerIdentity(customer) {
+  return Boolean(
+    String(customer?.customerNumber ?? customer?.customerId ?? customer?.id ?? "").trim() ||
+    String(customer?.email ?? "").trim() ||
+    String(customer?.phone ?? "").trim()
+  );
+}
+
+function buildStableOpenRouterUser(sessionId, customer) {
+  const stableIdentity = [
+    sessionId,
+    customer?.customerNumber ?? customer?.customerId ?? customer?.id ?? "",
+    customer?.email ?? "",
+    customer?.phone ?? ""
+  ].join(":");
+
+  return `support_${createHash("sha256").update(stableIdentity).digest("hex").slice(0, 24)}`;
+}
+
+function buildRequestOptions({
+  model,
+  message = "",
+  history = [],
+  customer,
+  knownOrders,
+  sessionId
+}) {
+  const trimmed = String(message).trim();
+  const toolChoice = buildGuardrailedToolChoice(trimmed);
+  const simpleTurn =
+    trimmed.length <= 90 &&
+    history.length <= 4 &&
+    !hasVerifiedCustomerIdentity(customer) &&
+    (!Array.isArray(knownOrders) || knownOrders.length === 0);
+  const complexTurn =
+    trimmed.length >= 220 ||
+    history.length >= 6 ||
+    (hasVerifiedCustomerIdentity(customer) && trimmed.length >= 140) ||
+    (Array.isArray(knownOrders) && knownOrders.length > 0);
+  const providerDataCollection =
+    String(
+      process.env.OPENROUTER_DATA_COLLECTION ??
+      process.env.NETLIFY_OPENROUTER_DATA_COLLECTION ??
+      "deny"
+    ).trim().toLowerCase() === "allow"
+      ? "allow"
+      : "deny";
+  const requireZeroDataRetention = String(
+    process.env.OPENROUTER_REQUIRE_ZDR ??
+    process.env.NETLIFY_OPENROUTER_REQUIRE_ZDR ??
+    "false"
+  ).trim().toLowerCase() === "true";
+  const configuredProviderSort = String(
+    process.env.OPENROUTER_PROVIDER_SORT ??
+    process.env.NETLIFY_OPENROUTER_PROVIDER_SORT ??
+    ""
+  ).trim().toLowerCase();
+  const providerSort =
+    configuredProviderSort ||
+    (simpleTurn && toolChoice === "auto" ? "price" : "");
+
+  return {
+    max_output_tokens: complexTurn ? 1200 : simpleTurn ? 450 : 800,
+    temperature: complexTurn ? 0.15 : 0.2,
+    tool_choice: toolChoice,
+    user: buildStableOpenRouterUser(sessionId, customer),
+    max_tool_calls: MAX_TOOL_STEPS,
+    provider: {
+      require_parameters: true,
+      data_collection: providerDataCollection,
+      ...(providerSort ? { sort: providerSort } : {}),
+      ...(requireZeroDataRetention ? { zdr: true } : {})
+    },
+    ...(model.startsWith("deepseek/")
+      ? {
+          reasoning: complexTurn
+            ? {
+                enabled: true,
+                exclude: true
+              }
+            : {
+                enabled: false
+              }
+        }
+      : {})
+  };
+}
+
+function formatList(values = [], locale = "en") {
+  const filtered = values.filter(Boolean);
+  return filtered.join(locale === "ar" ? "، " : ", ");
+}
+
+function formatStockStatus(stockStatus = "", locale = "en") {
+  switch (stockStatus) {
+    case "in_stock":
+      return locale === "ar" ? "متوفر الآن" : "In stock";
+    case "low_stock":
+      return locale === "ar" ? "كمية محدودة" : "Low stock";
+    case "out_of_stock":
+      return locale === "ar" ? "غير متوفر حالياً" : "Out of stock";
+    default:
+      return locale === "ar" ? "تحقق من التوفر" : "Check availability";
+  }
+}
+
+function buildCatalogToolTrace({ action, output, sharingBoundary }) {
+  return [
+    {
+      tool: "search_catalog",
+      args: sanitizeToolArgsForExternalSharing(
+        "search_catalog",
+        tokenizeValue(action, sharingBoundary),
+        sharingBoundary
+      ),
+      output: sanitizeToolOutputForExternalSharing(
+        "search_catalog",
+        tokenizeValue(output, sharingBoundary),
+        sharingBoundary
+      )
+    }
+  ];
+}
+
+function buildProductReply(match, locale = "en") {
+  if (locale === "ar") {
+    return [
+      `${match.name}`,
+      `السعر: ${match.priceSar} ${match.currency}`,
+      `الوصف: ${match.shortDescription}`,
+      `التوفر: ${formatStockStatus(match.stockStatus, locale)}`,
+      `التقييم: ${match.rating}/5`,
+      `المقاس: ${match.size}`,
+      `الألوان: ${formatList(match.colors, locale)}`,
+      `أبرز التفاصيل: ${formatList(match.highlights, locale)}`
+    ].join("\n");
+  }
+
+  return [
+    `${match.name}`,
+    `Price: ${match.priceSar} ${match.currency}`,
+    `Description: ${match.shortDescription}`,
+    `Availability: ${formatStockStatus(match.stockStatus, locale)}`,
+    `Rating: ${match.rating}/5`,
+    `Size: ${match.size}`,
+    `Colors: ${formatList(match.colors, locale)}`,
+    `Highlights: ${formatList(match.highlights, locale)}`
+  ].join("\n");
+}
+
+function buildRecommendationReply(output, locale = "en") {
+  const lines = output.matches.map((item) =>
+    locale === "ar"
+      ? `- ${item.name}: ${item.priceSar} ${item.currency} — ${item.shortDescription}`
+      : `- ${item.name}: ${item.priceSar} ${item.currency} — ${item.shortDescription}`
+  );
+
+  return [output.rationale, ...lines].filter(Boolean).join("\n\n");
+}
+
+function findRecentProductReference(message = "", history = []) {
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    const entry = history[index];
+    const product = findProduct(entry?.content ?? "");
+    if (product) {
+      return product;
+    }
+  }
+
+  return null;
+}
+
+function planDeterministicCatalogAction(message = "", history = []) {
+  if (NON_CATALOG_PATTERN.test(message)) {
+    return null;
+  }
+
+  const directProductMatch = findProduct(message);
+  if (directProductMatch) {
+    return {
+      query: directProductMatch.name,
+      mode: "product_lookup"
+    };
+  }
+
+  if (RECOMMENDATION_PATTERN.test(message)) {
+    return {
+      query: message,
+      mode: "recommendation"
+    };
+  }
+
+  if (CATALOG_BROWSE_PATTERN.test(message)) {
+    return {
+      query: message,
+      mode: "catalog_overview"
+    };
+  }
+
+  if (CATALOG_FOLLOW_UP_PATTERN.test(message)) {
+    const recentProduct = findRecentProductReference("", history);
+    if (recentProduct) {
+      return {
+        query: recentProduct.name,
+        mode: "product_lookup"
+      };
+    }
+  }
+
+  return null;
+}
+
+function buildDeterministicCatalogResponse({ action, output, locale = "en", sharingBoundary }) {
+  const toolTrace = buildCatalogToolTrace({ action, output, sharingBoundary });
+
+  if (output?.ok === false) {
+    return {
+      reply: output.message,
+      intent: action.mode === "recommendation" ? "recommendations" : "product_information",
+      confidence: 0.3,
+      degraded: true,
+      toolTrace,
+      structured: {
+        intent: action.mode === "recommendation" ? "recommendations" : "product_information",
+        resolution: "temporary_failure",
+        handoffRecommended: true,
+        customerAction: locale === "ar" ? "أعد المحاولة بعد قليل أو اطلب التحويل إلى موظف دعم." : "Try again shortly or ask for a human agent."
+      }
+    };
+  }
+
+  if (output.match) {
+    return {
+      reply: buildProductReply(output.match, locale),
+      intent: "product_information",
+      confidence: 0.96,
+      toolTrace,
+      structured: {
+        intent: "product_information",
+        resolution: "answered",
+        handoffRecommended: false,
+        customerAction: ""
+      }
+    };
+  }
+
+  if (output.matches?.length) {
+    return {
+      reply:
+        action.mode === "recommendation"
+          ? buildRecommendationReply(output, locale)
+          : output.matches
+              .map((item) => `${item.name} - ${item.priceSar} ${item.currency}`)
+              .join("\n"),
+      intent: action.mode === "recommendation" ? "recommendations" : "catalog_browse",
+      confidence: action.mode === "recommendation" ? 0.9 : 0.88,
+      toolTrace,
+      structured: {
+        intent: action.mode === "recommendation" ? "recommendations" : "catalog_browse",
+        resolution: "answered",
+        handoffRecommended: false,
+        customerAction: ""
+      }
+    };
+  }
+
+  return {
+    reply:
+      output.summary ??
+      (locale === "ar"
+        ? "اذكر اسم المنتج أو الفئة أو الاستخدام الذي تريده وسأبحث لك في الكتالوج."
+        : "Tell me the product name, category, or use case and I’ll search the catalog for you."),
+    intent: "catalog_browse",
+    confidence: 0.74,
+    toolTrace,
+    structured: {
+      intent: "catalog_browse",
+      resolution: "clarification_needed",
+      handoffRecommended: false,
+      customerAction: locale === "ar" ? "اذكر اسم المنتج أو الفئة أو الاستخدام." : "Tell me the product name, category, or use case."
+    }
+  };
+}
+
 export function createSupportAgent({ track = () => {} } = {}) {
   const configuredModel =
     process.env.OPENROUTER_MODEL ||
@@ -316,8 +691,14 @@ export function createSupportAgent({ track = () => {} } = {}) {
     DEFAULT_OPENROUTER_MODEL;
   const config = {
     defaultModel: configuredModel,
-    cheapModel: configuredModel,
-    complexModel: configuredModel
+    cheapModel:
+      process.env.OPENROUTER_CHEAP_MODEL ||
+      process.env.NETLIFY_OPENROUTER_CHEAP_MODEL ||
+      configuredModel,
+    complexModel:
+      process.env.OPENROUTER_COMPLEX_MODEL ||
+      process.env.NETLIFY_OPENROUTER_COMPLEX_MODEL ||
+      configuredModel
   };
 
   function resolveApiKey(requestApiKey) {
@@ -357,6 +738,18 @@ export function createSupportAgent({ track = () => {} } = {}) {
     });
 
     if (!apiKey) {
+      const visibleHistory = normalizeHistoryForPlanning(history, sharingBoundary);
+      const deterministicCatalogAction = planDeterministicCatalogAction(message, visibleHistory);
+      if (deterministicCatalogAction) {
+        const output = await toolbox.execute("search_catalog", deterministicCatalogAction);
+        return buildDeterministicCatalogResponse({
+          action: deterministicCatalogAction,
+          output,
+          locale,
+          sharingBoundary
+        });
+      }
+
       return {
         reply:
           locale === "ar"
@@ -375,11 +768,15 @@ export function createSupportAgent({ track = () => {} } = {}) {
       config
     });
     const instructions = buildSupportInstructions({
-      locale,
-      storefrontLocale,
+      locale
+    });
+    const requestOptions = buildRequestOptions({
+      model: selectedModel,
+      message,
+      history,
       customer,
       knownOrders,
-      history
+      sessionId
     });
     const toolTrace = [];
     let model = selectedModel;
@@ -392,6 +789,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
         instructions,
         input: conversationInput,
         tools: toolbox.tools,
+        requestOptions,
         track,
         sessionId,
         locale
@@ -433,10 +831,12 @@ export function createSupportAgent({ track = () => {} } = {}) {
           const resolvedArgs = detokenizeValue(args, sharingBoundary);
           const output = await toolbox.execute(call.name, resolvedArgs);
           const protectedArgs = sanitizeToolArgsForExternalSharing(
+            call.name,
             tokenizeValue(resolvedArgs, sharingBoundary),
             sharingBoundary
           );
           const protectedOutput = sanitizeToolOutputForExternalSharing(
+            call.name,
             tokenizeValue(output, sharingBoundary),
             sharingBoundary
           );
@@ -460,6 +860,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
           instructions,
           input: conversationInput,
           tools: toolbox.tools,
+          requestOptions,
           track,
           sessionId,
           locale
@@ -504,7 +905,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
         model: config.defaultModel,
         cheapModel: config.cheapModel,
         complexModel: config.complexModel,
-        freeOnly: true
+        freeOnly: false
       };
     }
   };

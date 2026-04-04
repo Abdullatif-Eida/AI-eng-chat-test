@@ -1,6 +1,12 @@
 import { products } from "./products.js";
 
 const productIndex = new Map(products.map((product) => [product.id, product]));
+const MAX_ORDER_ITEMS = 12;
+const MAX_ITEM_QUANTITY = 10;
+const MAX_NAME_LENGTH = 120;
+const MAX_EMAIL_LENGTH = 200;
+const MAX_PHONE_LENGTH = 24;
+const MAX_CUSTOMER_NUMBER_LENGTH = 64;
 
 let nextOrderSeed = 10540;
 
@@ -110,15 +116,70 @@ export function listOrders() {
   return orders.map(enrichOrder).reverse();
 }
 
-export function createOrder({ customerName, email, items, locale = "en" }) {
+function normalizeName(value = "", fallback = "Guest Shopper") {
+  const trimmed = String(value ?? "").trim().slice(0, MAX_NAME_LENGTH);
+  return trimmed || fallback;
+}
+
+function normalizeEmail(value = "", fallback = "guest@example.com") {
+  const trimmed = String(value ?? "").trim().toLowerCase().slice(0, MAX_EMAIL_LENGTH);
+  return trimmed || fallback;
+}
+
+function normalizePhone(value = "") {
+  const trimmed = String(value ?? "").replace(/[^\d+]/g, "").slice(0, MAX_PHONE_LENGTH);
+  return trimmed || null;
+}
+
+function normalizeCustomerNumber(value = "") {
+  const trimmed = String(value ?? "").trim().toUpperCase().replace(/\s+/g, "-").slice(0, MAX_CUSTOMER_NUMBER_LENGTH);
+  return trimmed || null;
+}
+
+function normalizeOrderItems(items = []) {
+  if (!Array.isArray(items)) {
+    throw new TypeError("Invalid order: items must be an array.");
+  }
+
+  const dedupedItems = new Map();
+
+  for (const rawItem of items.slice(0, MAX_ORDER_ITEMS)) {
+    const productId = String(rawItem?.productId ?? "").trim();
+    if (!productIndex.has(productId)) {
+      continue;
+    }
+
+    const nextQuantity = Math.max(1, Math.min(MAX_ITEM_QUANTITY, Number(rawItem?.quantity) || 1));
+    dedupedItems.set(productId, Math.min(
+      MAX_ITEM_QUANTITY,
+      (dedupedItems.get(productId) ?? 0) + nextQuantity
+    ));
+  }
+
+  const normalizedItems = Array.from(dedupedItems.entries()).map(([productId, quantity]) => ({
+    productId,
+    quantity
+  }));
+
+  if (normalizedItems.length === 0) {
+    throw new TypeError("Invalid order: at least one valid cart item is required.");
+  }
+
+  return normalizedItems;
+}
+
+export function createOrder({ customerName, email, phone, customerNumber, items, locale = "en" }) {
   const orderNumber = `KS-${nextOrderSeed++}`;
   const city = locale === "ar" ? "Riyadh" : "Riyadh";
   const today = new Date().toISOString().slice(0, 10);
   const scenario = deliveryScenarios[Math.floor(Math.random() * deliveryScenarios.length)];
+  const normalizedItems = normalizeOrderItems(items);
   const order = {
     orderNumber,
-    customerName: customerName?.trim() || "Guest Shopper",
-    email: email?.trim() || "guest@example.com",
+    customerName: normalizeName(customerName),
+    email: normalizeEmail(email),
+    phone: normalizePhone(phone),
+    customerNumber: normalizeCustomerNumber(customerNumber),
     status: scenario.status,
     eta: scenario.eta.replace("{date}", today),
     city,
@@ -129,10 +190,7 @@ export function createOrder({ customerName, email, items, locale = "en" }) {
       scenario.trackingUrl === "tracking"
         ? `https://tracking.example.com/${orderNumber}`
         : null,
-    items: items.map((item) => ({
-      productId: item.productId,
-      quantity: Math.max(1, Number(item.quantity) || 1)
-    }))
+    items: normalizedItems
   };
 
   orders.unshift(order);

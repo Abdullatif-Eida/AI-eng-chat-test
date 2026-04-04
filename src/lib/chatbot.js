@@ -21,9 +21,57 @@ function normalizeEmail(email = "") {
   return String(email ?? "").trim().toLowerCase();
 }
 
-function buildCustomerFingerprint(profile) {
+function normalizePhone(phone = "") {
+  return String(phone ?? "").replace(/[^\d+]/g, "").slice(0, 24);
+}
+
+function normalizeCustomerReference(value = "") {
+  return String(value ?? "").trim().toUpperCase().replace(/\s+/g, "-").slice(0, 64);
+}
+
+function fingerprintMatchesProfile(fingerprint, profile) {
+  if (!fingerprint || fingerprint === "anonymous") {
+    return false;
+  }
+
+  const [type, rawValue = ""] = String(fingerprint).split(":");
+  switch (type) {
+    case "customer":
+      return normalizeCustomerReference(profile?.customerNumber) === rawValue;
+    case "email":
+      return normalizeEmail(profile?.email) === rawValue;
+    case "phone":
+      return normalizePhone(profile?.phone) === rawValue;
+    default:
+      return false;
+  }
+}
+
+function buildCustomerFingerprint(profile, preferredFingerprint = null) {
+  if (fingerprintMatchesProfile(preferredFingerprint, profile)) {
+    return preferredFingerprint;
+  }
+
+  const customerNumber = normalizeCustomerReference(profile?.customerNumber);
+  if (customerNumber) {
+    return `customer:${customerNumber}`;
+  }
+
   const email = normalizeEmail(profile?.email);
-  return email ? `email:${email}` : "anonymous";
+  if (email) {
+    return `email:${email}`;
+  }
+
+  const phone = normalizePhone(profile?.phone);
+  if (phone) {
+    return `phone:${phone}`;
+  }
+
+  return "anonymous";
+}
+
+function isVerifiedFingerprint(fingerprint) {
+  return Boolean(fingerprint && fingerprint !== "anonymous");
 }
 
 function createSessionState(now) {
@@ -52,18 +100,24 @@ function sanitizeCustomerProfile(profile) {
 
   const name = profile.name ? String(profile.name).trim().slice(0, 120) : undefined;
   const email = profile.email ? String(profile.email).trim().toLowerCase().slice(0, 200) : undefined;
+  const phone = profile.phone ? normalizePhone(profile.phone) : undefined;
+  const customerNumber = profile.customerNumber
+    ? normalizeCustomerReference(profile.customerNumber)
+    : undefined;
   const newsletter =
     typeof profile.newsletter === "boolean"
       ? profile.newsletter
       : undefined;
 
-  if (!name && !email && typeof newsletter === "undefined") {
+  if (!name && !email && !phone && !customerNumber && typeof newsletter === "undefined") {
     return null;
   }
 
   return {
     ...(name ? { name } : {}),
     ...(email ? { email } : {}),
+    ...(phone ? { phone } : {}),
+    ...(customerNumber ? { customerNumber } : {}),
     ...(typeof newsletter === "boolean" ? { newsletter } : {})
   };
 }
@@ -105,24 +159,25 @@ function applyCustomerProfileToSession(session, safeCustomerProfile, currentTime
     return false;
   }
 
-  const nextFingerprint = buildCustomerFingerprint(safeCustomerProfile);
+  const mergedCustomerProfile = {
+    ...session.customer,
+    ...safeCustomerProfile
+  };
+  const nextFingerprint = buildCustomerFingerprint(mergedCustomerProfile, session.customerFingerprint);
   const identityChanged =
-    session.customerFingerprint.startsWith("email:") &&
-    nextFingerprint.startsWith("email:") &&
+    isVerifiedFingerprint(session.customerFingerprint) &&
+    isVerifiedFingerprint(nextFingerprint) &&
     session.customerFingerprint !== nextFingerprint;
 
   if (identityChanged) {
     resetSensitiveSessionState(session, currentTime);
     session.customer = { ...safeCustomerProfile };
-    session.customerFingerprint = nextFingerprint;
+    session.customerFingerprint = buildCustomerFingerprint(session.customer);
     return true;
   }
 
-  session.customer = {
-    ...session.customer,
-    ...safeCustomerProfile
-  };
-  session.customerFingerprint = buildCustomerFingerprint(session.customer);
+  session.customer = mergedCustomerProfile;
+  session.customerFingerprint = nextFingerprint;
   return false;
 }
 
@@ -279,7 +334,13 @@ export function createChatbot({ commerceProvider, now = () => Date.now(), sessio
     session.lastLocale = locale;
 
     const safeCustomerProfile = sanitizeCustomerProfile(customerProfile);
-    if (safeCustomerProfile?.name || safeCustomerProfile?.email || typeof safeCustomerProfile?.newsletter === "boolean") {
+    if (
+      safeCustomerProfile?.name ||
+      safeCustomerProfile?.email ||
+      safeCustomerProfile?.phone ||
+      safeCustomerProfile?.customerNumber ||
+      typeof safeCustomerProfile?.newsletter === "boolean"
+    ) {
       const identityChanged = applyCustomerProfileToSession(session, safeCustomerProfile, now());
       if (identityChanged) {
         analytics.push({
