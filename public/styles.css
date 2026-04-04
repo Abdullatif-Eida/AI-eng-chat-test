@@ -2380,12 +2380,12 @@ html[dir="rtl"] .cart-list {
   gap: 10px;
 }
 
-.message-row.user {
-  justify-content: flex-end;
+.message-row.bot {
+  justify-content: flex-start;
 }
 
-.message-row.user .message-avatar {
-  display: none;
+.message-row.user {
+  justify-content: flex-end;
 }
 
 .message-bubble {
@@ -2407,7 +2407,6 @@ html[dir="rtl"] .cart-list {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
   margin-top: 8px;
   color: rgba(49, 84, 112, 0.62);
   font-size: 0.7rem;
@@ -2420,6 +2419,10 @@ html[dir="rtl"] .cart-list {
   border-bottom-right-radius: 8px;
 }
 
+.message-bubble.user .message-meta {
+  color: rgba(241, 248, 255, 0.86);
+}
+
 .message-bubble.bot {
   align-self: flex-start;
   background: rgba(255, 255, 255, 0.92);
@@ -2429,12 +2432,7 @@ html[dir="rtl"] .cart-list {
 }
 
 .message-bubble.bot .message-meta {
-  color: rgba(49, 84, 112, 0.58);
-}
-
-.message-status {
-  color: #a7ddff;
-  letter-spacing: -0.06em;
+  color: rgba(49, 84, 112, 0.72);
 }
 
 .typing-bubble {
@@ -2821,25 +2819,6 @@ html[dir="rtl"] .product-price-card strong {
   unicode-bidi: isolate;
 }
 
-html[dir="rtl"] .message-row.bot {
-  flex-direction: row-reverse;
-  justify-content: flex-end;
-}
-
-html[dir="rtl"] .message-row.user {
-  justify-content: flex-start;
-}
-
-html[dir="rtl"] .message-row.user .message-bubble {
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 22px;
-}
-
-html[dir="rtl"] .message-row.bot .message-bubble {
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 22px;
-}
-
 @media (max-width: 1280px) {
   .hero-content,
   .support-hero,
@@ -3160,12 +3139,6 @@ html[dir="rtl"] .message-row.bot .message-bubble {
 
   .message-bubble {
     max-width: 86%;
-  }
-
-  .message-avatar {
-    width: 34px;
-    height: 34px;
-    font-size: 0.72rem;
   }
 
   .message-bubble p {

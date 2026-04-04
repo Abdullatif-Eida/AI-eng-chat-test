@@ -24187,24 +24187,15 @@ function SupportWidget({
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
-              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: `message-row ${message.role}`, children: [
-                message.role === "bot" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-avatar", children: "LA" }) : null,
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-meta", children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: formatMessageTime(message.sentAt, locale) }),
-                    message.role === "user" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-status", children: "\u2713\u2713" }) : null
-                  ] })
-                ] })
-              ] }, message.id)),
-              loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "message-row bot typing-row", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-avatar", children: "LA" }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-bubble bot typing-bubble", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "typing-dots", "aria-label": text.typing, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
-                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {})
-                ] }) })
-              ] }) : null
+              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-meta", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-time", children: formatMessageTime(message.sentAt, locale) }) })
+              ] }) }, message.id)),
+              loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-row bot typing-row", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-bubble bot typing-bubble", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "typing-dots", "aria-label": text.typing, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {})
+              ] }) }) }) : null
             ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(

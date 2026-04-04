@@ -2372,19 +2372,16 @@ function SupportWidget({
             <div className="message-list">
               {messages.map((message) => (
                 <article key={message.id} className={`message-row ${message.role}`}>
-                  {message.role === "bot" ? <div className="message-avatar">LA</div> : null}
                   <div className={`message-bubble ${message.role}`}>
                     <p>{message.text}</p>
                     <div className="message-meta">
-                      <span>{formatMessageTime(message.sentAt, locale)}</span>
-                      {message.role === "user" ? <span className="message-status">✓✓</span> : null}
+                      <span className="message-time">{formatMessageTime(message.sentAt, locale)}</span>
                     </div>
                   </div>
                 </article>
               ))}
               {loading ? (
                 <article className="message-row bot typing-row">
-                  <div className="message-avatar">LA</div>
                   <div className="message-bubble bot typing-bubble">
                     <div className="typing-dots" aria-label={text.typing}>
                       <span />
