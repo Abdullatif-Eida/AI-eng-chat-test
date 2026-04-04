@@ -173,16 +173,17 @@ const localized = {
       storeBlurb: "A support-first storefront showing how an AI agent can assist across a modern e-commerce journey."
     },
     widget: {
-      homeTitle: "Hi there",
+      homeTitle: "Support concierge",
       chatTitle: "Chat with us",
-      offlineNotice: "Hi there 👋 We’re here to help with products, orders, returns, payments, and store policies. Tell us what you need and we’ll guide you right away.",
+      offlineNotice:
+        "Hi there. We can help with products, orders, returns, payments, and store policies from the same storefront support desk.",
       introTitle: "Please introduce yourself",
       namePlaceholder: "Enter your name",
       emailPlaceholder: "Enter your email",
       newsletter: "Sign up for our newsletter",
       introSend: "Send",
       skipIntro: "Skip for now",
-      homeHero: "Welcome to our website. Ask us anything 🎉",
+      homeHero: "Support that feels built into the store.",
       chatEntryTitle: "Chat with us",
       chatEntryBody: "We typically reply within a few minutes.",
       homeTab: "Home",
@@ -377,16 +378,17 @@ const localized = {
       storeBlurb: "متجر تجريبي يوضح كيف يندمج الدعم الذكي داخل متجر سعودي بسيط وواضح."
     },
     widget: {
-      homeTitle: "مرحبًا",
+      homeTitle: "مركز الدعم",
       chatTitle: "تحدث معنا",
-      offlineNotice: "مرحبًا 👋 نحن هنا لمساعدتك في المنتجات والطلبات والاسترجاع والدفع وسياسات المتجر. اكتب ما تحتاجه وسنوجّهك مباشرة.",
+      offlineNotice:
+        "مرحبًا. نحن هنا لمساعدتك في المنتجات والطلبات والاسترجاع والدفع وسياسات المتجر من داخل واجهة المتجر نفسها.",
       introTitle: "عرّفنا بنفسك",
       namePlaceholder: "أدخل اسمك",
       emailPlaceholder: "أدخل بريدك الإلكتروني",
       newsletter: "سجل في النشرة البريدية",
       introSend: "إرسال",
       skipIntro: "تخطي الآن",
-      homeHero: "مرحبًا بك في موقعنا. اسألنا أي شيء 🎉",
+      homeHero: "دعم مصمم ليشبه المتجر نفسه.",
       chatEntryTitle: "تحدث معنا",
       chatEntryBody: "عادة نرد خلال بضع دقائق.",
       homeTab: "الرئيسية",
@@ -912,6 +914,17 @@ function App() {
     setWidgetView(customerProfile.submitted ? "chat" : "home");
   }
 
+  function primeSupportPrompt(prompt) {
+    if (!prompt.trim()) {
+      return;
+    }
+
+    setWidgetOpen(true);
+    setQueuedPrompt(prompt);
+    setDraft(prompt);
+    setWidgetView(customerProfile.submitted ? "chat" : "home");
+  }
+
   function scrollToSection(id) {
     document.getElementById(id)?.scrollIntoView({
       behavior: "smooth",
@@ -1259,7 +1272,12 @@ function App() {
         )}
       </main>
 
-      <SupportTeaser label={content.widget.chatTitle} open={widgetOpen} onOpen={() => setWidgetOpen(true)} />
+      <SupportTeaser
+        label={content.widget.chatTitle}
+        locale={siteLocale}
+        open={widgetOpen}
+        onOpen={() => setWidgetOpen(true)}
+      />
 
       {cartOpen ? (
         <CartDrawer
@@ -1302,7 +1320,7 @@ function App() {
         customerProfile={customerProfile}
         onChangeDraft={setDraft}
         onClose={() => setWidgetOpen(false)}
-        onOpen={setWidgetOpen}
+        onPrimePrompt={primeSupportPrompt}
         onProfileSubmit={submitLeadProfile}
         onResetConversation={resetConversation}
         onSend={sendMessage}
@@ -1772,14 +1790,17 @@ function FooterSection({ content }) {
   );
 }
 
-function SupportTeaser({ label, open, onOpen }) {
+function SupportTeaser({ label, locale, open, onOpen }) {
   return (
     <div className={`support-teaser ${open ? "support-teaser-open" : ""}`}>
       {!open ? (
         <>
           <button className="support-pill" type="button" onClick={onOpen}>
-            <span>👋</span>
-            <span>{label}</span>
+            <span className="support-pill-spark">✦</span>
+            <span className="support-pill-copy">
+              <strong>{label}</strong>
+              <span>{localizeText(locale, "Instant product and order help", "دعم فوري للمنتجات والطلبات")}</span>
+            </span>
           </button>
           <button className="support-bubble" type="button" onClick={onOpen} aria-label="chat with us">
             <ChatIcon />
@@ -2066,6 +2087,7 @@ function SupportWidget({
   messages,
   onChangeDraft,
   onClose,
+  onPrimePrompt,
   onProfileSubmit,
   onSend,
   onSetView,
@@ -2075,6 +2097,7 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
+  const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
   const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [compactMode, setCompactMode] = useState(false);
@@ -2116,6 +2139,14 @@ function SupportWidget({
 
     return () => window.cancelAnimationFrame(frame);
   }, [messages, loading, open, view]);
+
+  function handlePromptSelection(prompt) {
+    onPrimePrompt(prompt);
+  }
+
+  const capabilityPills = locale === "ar"
+    ? ["اقتراحات شراء", "ربط الطلبات", "استرجاع وسياسات", "تحويل للبشر"]
+    : ["Buying advice", "Order tracking", "Returns & policies", "Human handoff"];
 
   return (
     <aside
@@ -2184,6 +2215,7 @@ function SupportWidget({
           </div>
         </div>
         <div className="widget-header-end">
+          <span className="widget-header-badge">{localizeText(locale, "Live support", "دعم مباشر")}</span>
           <button className="widget-icon widget-close" type="button" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -2192,18 +2224,53 @@ function SupportWidget({
 
       {view === "home" ? (
         <div className="widget-home">
-          <div className="widget-offline-card">
+          <section className="widget-home-hero">
+            <span className="widget-home-eyebrow">{localizeText(locale, "Storefront support", "دعم داخل المتجر")}</span>
+            <strong>{customerProfile.submitted
+              ? localizeText(locale, `Welcome back, ${customerProfile.name}`, `مرحبًا بعودتك ${customerProfile.name}`)
+              : text.homeHero}</strong>
             <p>{text.offlineNotice}</p>
-          </div>
+            <div className="widget-capability-row">
+              {capabilityPills.map((item) => (
+                <span key={item} className="widget-capability-pill">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="widget-home-stats" aria-label={localizeText(locale, "Support overview", "نظرة عامة على الدعم")}>
+            <article className="widget-mini-stat">
+              <strong>{localizeText(locale, "Fast replies", "ردود سريعة")}</strong>
+              <span>{localizeText(locale, "Guided answers without leaving the product page.", "إجابات موجهة بدون الخروج من صفحة المنتج.")}</span>
+            </article>
+            <article className="widget-mini-stat">
+              <strong>{localizeText(locale, "Order-aware", "مرتبطة بطلباتك")}</strong>
+              <span>{localizeText(locale, "Saved details help us connect future orders on this device.", "البيانات المحفوظة تساعدنا نربط الطلبات القادمة على هذا الجهاز.")}</span>
+            </article>
+          </section>
 
           {customerProfile.submitted ? (
             <div className="lead-capture-card lead-saved-card">
-              <strong>{localizeText(locale, "You are ready to continue", "أنت جاهز للمتابعة")}</strong>
-              <p>
+              <div className="widget-section-heading">
+                <strong>{localizeText(locale, "You are ready to continue", "أنت جاهز للمتابعة")}</strong>
+                <span>{localizeText(locale, "Your profile stays linked on this device.", "ملفك محفوظ ومربوط على هذا الجهاز.")}</span>
+              </div>
+              <div className="lead-summary-grid">
+                <div>
+                  <span>{localizeText(locale, "Name", "الاسم")}</span>
+                  <strong>{customerProfile.name}</strong>
+                </div>
+                <div>
+                  <span>{localizeText(locale, "Email", "البريد الإلكتروني")}</span>
+                  <strong dir="ltr">{customerProfile.email}</strong>
+                </div>
+              </div>
+              <p className="lead-card-note">
                 {localizeText(
                   locale,
-                  `Using ${customerProfile.name} (${customerProfile.email}) for future support and orders on this device.`,
-                  `سنستخدم ${customerProfile.name} (${customerProfile.email}) في الدعم والطلبات القادمة على هذا الجهاز.`
+                  "Orders and future support chats can continue with the same saved identity.",
+                  "يمكن متابعة الطلبات والمحادثات القادمة بنفس الهوية المحفوظة."
                 )}
               </p>
               <div className="lead-actions">
@@ -2228,7 +2295,10 @@ function SupportWidget({
                 });
               }}
             >
-              <strong>{text.introTitle}</strong>
+              <div className="widget-section-heading">
+                <strong>{text.introTitle}</strong>
+                <span>{localizeText(locale, "Save your details once for faster support and order tracking.", "احفظ بياناتك مرة واحدة لتجربة دعم وتتبع أسرع.")}</span>
+              </div>
               <input
                 type="text"
                 value={leadName}
@@ -2249,6 +2319,13 @@ function SupportWidget({
                 />
                 <span>{text.newsletter}</span>
               </label>
+              <p className="lead-card-note">
+                {localizeText(
+                  locale,
+                  "We only use this profile to personalize support and attach demo orders on this device.",
+                  "نستخدم هذا الملف فقط لتخصيص الدعم وربط الطلبات التجريبية على هذا الجهاز."
+                )}
+              </p>
               <div className="lead-actions">
                 <button className="lead-submit" type="submit">
                   {text.introSend}
@@ -2256,6 +2333,21 @@ function SupportWidget({
               </div>
             </form>
           )}
+
+          <section className="widget-home-section">
+            <div className="widget-section-heading">
+              <strong>{localizeText(locale, "Start with a guided topic", "ابدأ بموضوع جاهز")}</strong>
+              <span>{localizeText(locale, "We’ll open chat with the question ready for you.", "سنفتح المحادثة مع تجهيز السؤال لك.")}</span>
+            </div>
+            <div className="widget-topic-grid">
+              {guidedPrompts.map((prompt) => (
+                <button key={prompt} className="widget-topic-card" type="button" onClick={() => handlePromptSelection(prompt)}>
+                  <strong>{prompt}</strong>
+                  <span>{localizeText(locale, "Open in chat", "افتح في المحادثة")}</span>
+                </button>
+              ))}
+            </div>
+          </section>
 
           <div className="widget-powered">
             <span className="powered-label">{text.poweredLabel}</span>
@@ -2265,9 +2357,13 @@ function SupportWidget({
       ) : (
         <div className="widget-chat">
           <div className="widget-chat-scroll" ref={messageListRef}>
+            <div className="widget-chat-intro">
+              <span className="widget-chat-intro-badge">{localizeText(locale, "Store support desk", "مكتب دعم المتجر")}</span>
+              <p>{localizeText(locale, "Ask about products, orders, returns, or policies and keep the whole conversation in one place.", "اسأل عن المنتجات أو الطلبات أو الإرجاع أو السياسات واحتفظ بكل المحادثة في مكان واحد.")}</p>
+            </div>
             <div className="prompt-row">
-              {(text.quickActions ?? prompts).slice(0, 5).map((prompt) => (
-                <button key={prompt} className="prompt-chip" type="button" onClick={() => onSend(prompt)}>
+              {guidedPrompts.map((prompt) => (
+                <button key={prompt} className="prompt-chip" type="button" onClick={() => handlePromptSelection(prompt)}>
                   {prompt}
                 </button>
               ))}

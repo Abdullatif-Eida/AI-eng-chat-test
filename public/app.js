@@ -22375,16 +22375,16 @@ var localized = {
       storeBlurb: "A support-first storefront showing how an AI agent can assist across a modern e-commerce journey."
     },
     widget: {
-      homeTitle: "Hi there",
+      homeTitle: "Support concierge",
       chatTitle: "Chat with us",
-      offlineNotice: "Hi there \u{1F44B} We\u2019re here to help with products, orders, returns, payments, and store policies. Tell us what you need and we\u2019ll guide you right away.",
+      offlineNotice: "Hi there. We can help with products, orders, returns, payments, and store policies from the same storefront support desk.",
       introTitle: "Please introduce yourself",
       namePlaceholder: "Enter your name",
       emailPlaceholder: "Enter your email",
       newsletter: "Sign up for our newsletter",
       introSend: "Send",
       skipIntro: "Skip for now",
-      homeHero: "Welcome to our website. Ask us anything \u{1F389}",
+      homeHero: "Support that feels built into the store.",
       chatEntryTitle: "Chat with us",
       chatEntryBody: "We typically reply within a few minutes.",
       homeTab: "Home",
@@ -22577,16 +22577,16 @@ var localized = {
       storeBlurb: "\u0645\u062A\u062C\u0631 \u062A\u062C\u0631\u064A\u0628\u064A \u064A\u0648\u0636\u062D \u0643\u064A\u0641 \u064A\u0646\u062F\u0645\u062C \u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0630\u0643\u064A \u062F\u0627\u062E\u0644 \u0645\u062A\u062C\u0631 \u0633\u0639\u0648\u062F\u064A \u0628\u0633\u064A\u0637 \u0648\u0648\u0627\u0636\u062D."
     },
     widget: {
-      homeTitle: "\u0645\u0631\u062D\u0628\u064B\u0627",
+      homeTitle: "\u0645\u0631\u0643\u0632 \u0627\u0644\u062F\u0639\u0645",
       chatTitle: "\u062A\u062D\u062F\u062B \u0645\u0639\u0646\u0627",
-      offlineNotice: "\u0645\u0631\u062D\u0628\u064B\u0627 \u{1F44B} \u0646\u062D\u0646 \u0647\u0646\u0627 \u0644\u0645\u0633\u0627\u0639\u062F\u062A\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0627\u0644\u062F\u0641\u0639 \u0648\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0645\u062A\u062C\u0631. \u0627\u0643\u062A\u0628 \u0645\u0627 \u062A\u062D\u062A\u0627\u062C\u0647 \u0648\u0633\u0646\u0648\u062C\u0651\u0647\u0643 \u0645\u0628\u0627\u0634\u0631\u0629.",
+      offlineNotice: "\u0645\u0631\u062D\u0628\u064B\u0627. \u0646\u062D\u0646 \u0647\u0646\u0627 \u0644\u0645\u0633\u0627\u0639\u062F\u062A\u0643 \u0641\u064A \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0627\u0644\u062F\u0641\u0639 \u0648\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0645\u062A\u062C\u0631 \u0645\u0646 \u062F\u0627\u062E\u0644 \u0648\u0627\u062C\u0647\u0629 \u0627\u0644\u0645\u062A\u062C\u0631 \u0646\u0641\u0633\u0647\u0627.",
       introTitle: "\u0639\u0631\u0651\u0641\u0646\u0627 \u0628\u0646\u0641\u0633\u0643",
       namePlaceholder: "\u0623\u062F\u062E\u0644 \u0627\u0633\u0645\u0643",
       emailPlaceholder: "\u0623\u062F\u062E\u0644 \u0628\u0631\u064A\u062F\u0643 \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A",
       newsletter: "\u0633\u062C\u0644 \u0641\u064A \u0627\u0644\u0646\u0634\u0631\u0629 \u0627\u0644\u0628\u0631\u064A\u062F\u064A\u0629",
       introSend: "\u0625\u0631\u0633\u0627\u0644",
       skipIntro: "\u062A\u062E\u0637\u064A \u0627\u0644\u0622\u0646",
-      homeHero: "\u0645\u0631\u062D\u0628\u064B\u0627 \u0628\u0643 \u0641\u064A \u0645\u0648\u0642\u0639\u0646\u0627. \u0627\u0633\u0623\u0644\u0646\u0627 \u0623\u064A \u0634\u064A\u0621 \u{1F389}",
+      homeHero: "\u062F\u0639\u0645 \u0645\u0635\u0645\u0645 \u0644\u064A\u0634\u0628\u0647 \u0627\u0644\u0645\u062A\u062C\u0631 \u0646\u0641\u0633\u0647.",
       chatEntryTitle: "\u062A\u062D\u062F\u062B \u0645\u0639\u0646\u0627",
       chatEntryBody: "\u0639\u0627\u062F\u0629 \u0646\u0631\u062F \u062E\u0644\u0627\u0644 \u0628\u0636\u0639 \u062F\u0642\u0627\u0626\u0642.",
       homeTab: "\u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629",
@@ -23012,6 +23012,15 @@ function App() {
     }
     setWidgetView(customerProfile.submitted ? "chat" : "home");
   }
+  function primeSupportPrompt(prompt) {
+    if (!prompt.trim()) {
+      return;
+    }
+    setWidgetOpen(true);
+    setQueuedPrompt(prompt);
+    setDraft(prompt);
+    setWidgetView(customerProfile.submitted ? "chat" : "home");
+  }
   function scrollToSection(id) {
     document.getElementById(id)?.scrollIntoView({
       behavior: "smooth",
@@ -23280,7 +23289,15 @@ function App() {
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FooterSection, { content })
     ] }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SupportTeaser, { label: content.widget.chatTitle, open: widgetOpen, onOpen: () => setWidgetOpen(true) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+      SupportTeaser,
+      {
+        label: content.widget.chatTitle,
+        locale: siteLocale,
+        open: widgetOpen,
+        onOpen: () => setWidgetOpen(true)
+      }
+    ),
     cartOpen ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
       CartDrawer,
       {
@@ -23324,7 +23341,7 @@ function App() {
         customerProfile,
         onChangeDraft: setDraft,
         onClose: () => setWidgetOpen(false),
-        onOpen: setWidgetOpen,
+        onPrimePrompt: primeSupportPrompt,
         onProfileSubmit: submitLeadProfile,
         onResetConversation: resetConversation,
         onSend: sendMessage,
@@ -23670,11 +23687,14 @@ function FooterSection({ content }) {
     ] })
   ] });
 }
-function SupportTeaser({ label, open, onOpen }) {
+function SupportTeaser({ label, locale, open, onOpen }) {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `support-teaser ${open ? "support-teaser-open" : ""}`, children: !open ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "support-pill", type: "button", onClick: onOpen, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "\u{1F44B}" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: label })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "support-pill-spark", children: "\u2726" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "support-pill-copy", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: label }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Instant product and order help", "\u062F\u0639\u0645 \u0641\u0648\u0631\u064A \u0644\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A") })
+      ] })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "support-bubble", type: "button", onClick: onOpen, "aria-label": "chat with us", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChatIcon, {}) })
   ] }) : null });
@@ -23923,6 +23943,7 @@ function SupportWidget({
   messages,
   onChangeDraft,
   onClose,
+  onPrimePrompt,
   onProfileSubmit,
   onSend,
   onSetView,
@@ -23932,6 +23953,7 @@ function SupportWidget({
   view
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
+  const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
   const [showMenu, setShowMenu] = (0, import_react.useState)(false);
   const [showEmojiPicker, setShowEmojiPicker] = (0, import_react.useState)(false);
   const [compactMode, setCompactMode] = (0, import_react.useState)(false);
@@ -23967,6 +23989,10 @@ function SupportWidget({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [messages, loading, open, view]);
+  function handlePromptSelection(prompt) {
+    onPrimePrompt(prompt);
+  }
+  const capabilityPills = locale === "ar" ? ["\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u0634\u0631\u0627\u0621", "\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A", "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0633\u064A\u0627\u0633\u0627\u062A", "\u062A\u062D\u0648\u064A\u0644 \u0644\u0644\u0628\u0634\u0631"] : ["Buying advice", "Order tracking", "Returns & policies", "Human handoff"];
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "aside",
     {
@@ -24038,16 +24064,47 @@ function SupportWidget({
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Usually replies instantly", "\u064A\u0631\u062F \u063A\u0627\u0644\u0628\u0627\u064B \u0628\u0634\u0643\u0644 \u0641\u0648\u0631\u064A") })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-header-end", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "widget-icon widget-close", type: "button", onClick: onClose, "aria-label": "Close", children: "\xD7" }) })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header-end", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-header-badge", children: localizeText(locale, "Live support", "\u062F\u0639\u0645 \u0645\u0628\u0627\u0634\u0631") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "widget-icon widget-close", type: "button", onClick: onClose, "aria-label": "Close", children: "\xD7" })
+          ] })
         ] }),
         view === "home" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-home", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-offline-card", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.offlineNotice }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-hero", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-home-eyebrow", children: localizeText(locale, "Storefront support", "\u062F\u0639\u0645 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062A\u062C\u0631") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.submitted ? localizeText(locale, `Welcome back, ${customerProfile.name}`, `\u0645\u0631\u062D\u0628\u064B\u0627 \u0628\u0639\u0648\u062F\u062A\u0643 ${customerProfile.name}`) : text.homeHero }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.offlineNotice }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-capability-row", children: capabilityPills.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-capability-pill", children: item }, item)) })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-stats", "aria-label": localizeText(locale, "Support overview", "\u0646\u0638\u0631\u0629 \u0639\u0627\u0645\u0629 \u0639\u0644\u0649 \u0627\u0644\u062F\u0639\u0645"), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Fast replies", "\u0631\u062F\u0648\u062F \u0633\u0631\u064A\u0639\u0629") }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Guided answers without leaving the product page.", "\u0625\u062C\u0627\u0628\u0627\u062A \u0645\u0648\u062C\u0647\u0629 \u0628\u062F\u0648\u0646 \u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0646 \u0635\u0641\u062D\u0629 \u0627\u0644\u0645\u0646\u062A\u062C.") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "widget-mini-stat", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Order-aware", "\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0637\u0644\u0628\u0627\u062A\u0643") }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Saved details help us connect future orders on this device.", "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u062A\u0633\u0627\u0639\u062F\u0646\u0627 \u0646\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.") })
+            ] })
+          ] }),
           customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-capture-card lead-saved-card", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "You are ready to continue", "\u0623\u0646\u062A \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629") }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: localizeText(
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "You are ready to continue", "\u0623\u0646\u062A \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629") }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Your profile stays linked on this device.", "\u0645\u0644\u0641\u0643 \u0645\u062D\u0641\u0648\u0638 \u0648\u0645\u0631\u0628\u0648\u0637 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "lead-summary-grid", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Name", "\u0627\u0644\u0627\u0633\u0645") }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.name })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Email", "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A") }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { dir: "ltr", children: customerProfile.email })
+              ] })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
               locale,
-              `Using ${customerProfile.name} (${customerProfile.email}) for future support and orders on this device.`,
-              `\u0633\u0646\u0633\u062A\u062E\u062F\u0645 ${customerProfile.name} (${customerProfile.email}) \u0641\u064A \u0627\u0644\u062F\u0639\u0645 \u0648\u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.`
+              "Orders and future support chats can continue with the same saved identity.",
+              "\u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0646\u0641\u0633 \u0627\u0644\u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629."
             ) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "button", onClick: () => onSetView("chat"), children: localizeText(locale, "Continue in chat", "\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") }) })
           ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
@@ -24066,7 +24123,10 @@ function SupportWidget({
                 });
               },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: text.introTitle }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: text.introTitle }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Save your details once for faster support and order tracking.", "\u0627\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0644\u062A\u062C\u0631\u0628\u0629 \u062F\u0639\u0645 \u0648\u062A\u062A\u0628\u0639 \u0623\u0633\u0631\u0639.") })
+                ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                   "input",
                   {
@@ -24096,17 +24156,36 @@ function SupportWidget({
                   ),
                   /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: text.newsletter })
                 ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "lead-card-note", children: localizeText(
+                  locale,
+                  "We only use this profile to personalize support and attach demo orders on this device.",
+                  "\u0646\u0633\u062A\u062E\u062F\u0645 \u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641 \u0641\u0642\u0637 \u0644\u062A\u062E\u0635\u064A\u0635 \u0627\u0644\u062F\u0639\u0645 \u0648\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632."
+                ) }),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "lead-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "lead-submit", type: "submit", children: text.introSend }) })
               ]
             }
           ),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-section", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Start with a guided topic", "\u0627\u0628\u062F\u0623 \u0628\u0645\u0648\u0636\u0648\u0639 \u062C\u0627\u0647\u0632") }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "We\u2019ll open chat with the question ready for you.", "\u0633\u0646\u0641\u062A\u062D \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629 \u0645\u0639 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0633\u0624\u0627\u0644 \u0644\u0643.") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-topic-grid", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "widget-topic-card", type: "button", onClick: () => handlePromptSelection(prompt), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: prompt }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Open in chat", "\u0627\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") })
+            ] }, prompt)) })
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-powered", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "powered-label", children: text.poweredLabel }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "powered-brand", children: text.poweredBrand })
           ] })
         ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat-scroll", ref: messageListRef, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat-intro", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-chat-intro-badge", children: localizeText(locale, "Store support desk", "\u0645\u0643\u062A\u0628 \u062F\u0639\u0645 \u0627\u0644\u0645\u062A\u062C\u0631") }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: localizeText(locale, "Ask about products, orders, returns, or policies and keep the whole conversation in one place.", "\u0627\u0633\u0623\u0644 \u0639\u0646 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0623\u0648 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0623\u0648 \u0627\u0644\u0625\u0631\u062C\u0627\u0639 \u0623\u0648 \u0627\u0644\u0633\u064A\u0627\u0633\u0627\u062A \u0648\u0627\u062D\u062A\u0641\u0638 \u0628\u0643\u0644 \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629 \u0641\u064A \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F.") })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
               messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: `message-row ${message.role}`, children: [
                 message.role === "bot" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-avatar", children: "LA" }) : null,
