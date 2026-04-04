@@ -86,56 +86,15 @@ function inferIntentFromToolTrace(toolTrace = []) {
 }
 
 export function selectSupportModel({
-  message = "",
-  history = [],
-  customer,
-  knownOrders,
   config
 }) {
-  const trimmed = String(message).trim();
-  let complexityScore = 0;
-
-  if (trimmed.length >= 220) {
-    complexityScore += 2;
-  }
-
-  if (countWords(trimmed) >= 35) {
-    complexityScore += 1;
-  }
-
-  if (countLineBreaks(trimmed) >= 2) {
-    complexityScore += 1;
-  }
-
-  if (history.length >= 6) {
-    complexityScore += 2;
-  }
-
-  if (customer?.email) {
-    complexityScore += 1;
-  }
-
-  if (Array.isArray(knownOrders) && knownOrders.length > 0) {
-    complexityScore += 1;
-  }
-
-  if (history.some((entry) => String(entry.content ?? "").length >= 180)) {
-    complexityScore += 1;
-  }
-
-  if (complexityScore >= 4) {
-    return config.complexModel;
-  }
-
-  if (complexityScore <= 1 && trimmed.length <= 80 && countWords(trimmed) <= 14 && history.length <= 4) {
-    return config.cheapModel;
-  }
-
-  return config.defaultModel;
+  return config.complexModel || config.defaultModel || config.cheapModel;
 }
 
 export function buildSupportInstructions({
-  locale = "en"
+  locale = "en",
+  storeContext = "",
+  sessionContext = ""
 }) {
   if (locale === "ar") {
     return [
@@ -158,8 +117,10 @@ export function buildSupportInstructions({
       "استخدم لغة آخر رسالة كتبها العميل في هذه الجولة.",
       "لا تغيّر الرد إلى الإنجليزية فقط لأن واجهة المتجر أو الرسائل السابقة أو أسماء المنتجات تستخدم الإنجليزية.",
       "أجب دائماً بالعربية الطبيعية.",
+      storeContext,
+      sessionContext,
       "أنتج في النهاية JSON فقط يطابق المخطط المطلوب بدقة، مع reply نصاً طبيعياً للمستخدم."
-    ].join("\n\n");
+    ].filter(Boolean).join("\n\n");
   }
 
   return [
@@ -182,8 +143,10 @@ export function buildSupportInstructions({
     "Use the language of the shopper's latest message for your reply.",
     "Do not switch the reply language just because the storefront, earlier turns, or product names use another language.",
     "Always respond in the shopper's language.",
+    storeContext,
+    sessionContext,
     "Your final answer must be JSON only and must match the required schema exactly. Put the natural shopper-facing message in reply."
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 export function buildSupportResponseFormat() {

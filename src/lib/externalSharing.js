@@ -19,15 +19,7 @@ const ORDER_SUMMARY_SHAPE = {
   courier: true,
   deliveryDate: true,
   totalSar: true,
-  items: [
-    {
-      productId: true,
-      name: true,
-      quantity: true,
-      priceSar: true,
-      currency: true
-    }
-  ]
+  items: [true]
 };
 
 const SEARCH_CATALOG_RESULT_SHAPE = {

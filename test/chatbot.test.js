@@ -45,6 +45,100 @@ function extractUserMessage(input = []) {
   return "";
 }
 
+function extractConversationTurns(input = []) {
+  return input
+    .filter((item) => item?.type === "message" && (item.role === "user" || item.role === "assistant"))
+    .map((item) => ({
+      role: item.role,
+      content: extractUserMessage([item])
+    }));
+}
+
+function findRecentOrderNumber(turns = []) {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const match = String(turns[index]?.content ?? "").match(ORDER_IDENTIFIER_PATTERN);
+    if (match?.[0]) {
+      return match[0];
+    }
+  }
+
+  return null;
+}
+
+function findRecentRecommendationQuery(turns = []) {
+  for (let index = turns.length - 1; index >= 0; index -= 1) {
+    const entry = turns[index];
+    if (
+      entry?.role === "user" &&
+      /recommend|best|top|gift|travel|رشح|أفضل|افضل|هدية/i.test(entry.content ?? "")
+    ) {
+      return String(entry.content ?? "");
+    }
+  }
+
+  return null;
+}
+
+function hasRecentOrderContext(turns = []) {
+  return turns
+    .slice(-6)
+    .some((entry) =>
+      /latest visible order|your order [A-Z]{1,4}-\d+|status:|شركة الشحن|الموعد المتوقع/i.test(String(entry?.content ?? ""))
+    );
+}
+
+function isOrderItemsFollowUp(message = "") {
+  return /what(?:'s| is)?(?: the)? (?:product|products|item|items)|what products it has|what does it include|items included|what did i order|what's in (?:it|my order)|which items(?: are)? in|ماذا يحتوي|المنتجات في الطلب/i.test(message);
+}
+
+function isOrderCorrectionFollowUp(message = "") {
+  return /that(?:'s| is)? not (?:my|the) order|wrong order|wrong items?|mine includes|it includes|includes items?|only\b|what you (?:are )?writ(?:e|ing)|what you wrote|مو هذا طلبي|هذا ليس طلبي|طلبي فيه/i.test(message);
+}
+
+function isLatestOrderRequest(message = "") {
+  return /latest order|most recent order|last order|newest order|آخر طلب|أحدث طلب/i.test(message);
+}
+
+function isGenericOrderTracking(message = "") {
+  return /where is my order|track|tracking|shipment|delivery status|order status|status of my order|my order|طلبي|تتبع|الشحنة|حالة الطلب/i.test(message);
+}
+
+function isRefundRequest(message = "") {
+  return /refund|return|استرجاع|استرداد/i.test(message);
+}
+
+function isCancellationRequest(message = "") {
+  return /cancel|change address|إلغاء|الغاء|تعديل العنوان/i.test(message);
+}
+
+function isPolicyRequest(message = "") {
+  return /data|privacy|sell|cookies|payment|payments|mada|visa|mastercard|apple pay|cash on delivery|shipping|delivery|terms|contact|support|return policy|refund policy|how do returns work|الخصوصية|بيانات|الدفع|الشحن|الشروط|التواصل|سياسة الإرجاع|سياسة الاسترداد/i.test(message);
+}
+
+function inferPolicyTopic(message = "") {
+  if (/return policy|refund policy|how do returns work|سياسة الإرجاع|سياسة الاسترداد/i.test(message)) {
+    return "returns";
+  }
+
+  if (/payment|payments|mada|visa|mastercard|apple pay|cash on delivery|الدفع/i.test(message)) {
+    return "payments";
+  }
+
+  if (/shipping|delivery|shipment|الشحن|التوصيل/i.test(message)) {
+    return "shipping";
+  }
+
+  if (/terms|conditions|الشروط|الأحكام/i.test(message)) {
+    return "terms";
+  }
+
+  if (/contact|support|email|phone|التواصل|الدعم|البريد/i.test(message)) {
+    return "contact";
+  }
+
+  return "privacy";
+}
+
 function normalizeToolOutput(rawOutput) {
   return JSON.parse(rawOutput);
 }
@@ -67,9 +161,13 @@ function buildStructuredReply({
   };
 }
 
-function planToolCall(message = "") {
+function planToolCall(input = []) {
+  const message = extractUserMessage(input);
   const normalized = message.toLowerCase();
+  const turns = extractConversationTurns(input);
   const orderNumber = message.match(ORDER_IDENTIFIER_PATTERN)?.[0];
+  const recentOrderNumber = findRecentOrderNumber(turns);
+  const recentRecommendationQuery = findRecentRecommendationQuery(turns);
 
   if (/my profile|my account|what email|which email|saved profile|saved email|profile on file|ملفي|حسابي|بريدي/i.test(message)) {
     return {
@@ -88,35 +186,49 @@ function planToolCall(message = "") {
     };
   }
 
-  if (/refund|return|استرجاع|استرداد/i.test(normalized)) {
-    return {
-      name: "get_return_options",
-      args: {
-        orderNumber
-      }
-    };
-  }
-
-  if (/cancel|change address|إلغاء|الغاء|تعديل العنوان/i.test(normalized)) {
-    return {
-      name: "get_cancellation_options",
-      args: {
-        orderNumber
-      }
-    };
-  }
-
-  if (/data|privacy|sell|cookies|الخصوصية|بيانات/i.test(normalized)) {
+  if (/return policy|refund policy|how do returns work|سياسة الإرجاع|سياسة الاسترداد/i.test(normalized)) {
     return {
       name: "get_policy_information",
       args: {
-        topic: "privacy",
+        topic: "returns",
         question: message
       }
     };
   }
 
-  if (orderNumber || /where is my order|track|shipment|طلبي|تتبع/i.test(normalized)) {
+  if (isRefundRequest(normalized)) {
+    return {
+      name: orderNumber || recentOrderNumber ? "get_return_options" : "list_customer_orders",
+      args: orderNumber || recentOrderNumber
+        ? {
+            orderNumber: orderNumber ?? recentOrderNumber
+          }
+        : {}
+    };
+  }
+
+  if (isCancellationRequest(normalized)) {
+    return {
+      name: orderNumber || recentOrderNumber ? "get_cancellation_options" : "list_customer_orders",
+      args: orderNumber || recentOrderNumber
+        ? {
+            orderNumber: orderNumber ?? recentOrderNumber
+          }
+        : {}
+    };
+  }
+
+  if (isPolicyRequest(normalized)) {
+    return {
+      name: "get_policy_information",
+      args: {
+        topic: inferPolicyTopic(normalized),
+        question: message
+      }
+    };
+  }
+
+  if (orderNumber) {
     return {
       name: "get_order_details",
       args: {
@@ -125,10 +237,40 @@ function planToolCall(message = "") {
     };
   }
 
-  if (/latest order|most recent order|last order|آخر طلب|أحدث طلب/i.test(normalized)) {
+  if (isOrderItemsFollowUp(message) || isOrderCorrectionFollowUp(message)) {
+    return {
+      name: recentOrderNumber ? "get_order_details" : "list_customer_orders",
+      args: recentOrderNumber
+        ? {
+            orderNumber: recentOrderNumber
+          }
+        : {}
+    };
+  }
+
+  if (isLatestOrderRequest(normalized) || isGenericOrderTracking(normalized)) {
     return {
       name: "list_customer_orders",
       args: {}
+    };
+  }
+
+  if (orderNumber && hasRecentOrderContext(turns)) {
+    return {
+      name: "get_order_details",
+      args: {
+        orderNumber
+      }
+    };
+  }
+
+  if (/others?|other ones?|something else|more options?|alternatives?/i.test(normalized) && recentRecommendationQuery) {
+    return {
+      name: "search_catalog",
+      args: {
+        query: recentRecommendationQuery,
+        mode: "recommendation"
+      }
     };
   }
 
@@ -142,13 +284,70 @@ function planToolCall(message = "") {
     };
   }
 
+  if (/electronics|accessories|gaming|storage|wearables|إلكترونيات|إكسسوارات|ألعاب|تخزين|ملبوسات/i.test(normalized)) {
+    return {
+      name: "search_catalog",
+      args: {
+        query: message,
+        mode: "category_browse"
+      }
+    };
+  }
+
   return {
     name: "search_catalog",
     args: {
-      query: message,
+      query: recentRecommendationQuery && /others?|other ones?|something else|alternatives?/i.test(normalized)
+        ? recentRecommendationQuery
+        : message,
       mode: /recommend|best|رشح|أفضل/i.test(normalized) ? "recommendation" : "product_lookup"
     }
   };
+}
+
+function planFollowUpToolCall({ input, callItem, toolOutput }) {
+  const message = extractUserMessage(input);
+  const turns = extractConversationTurns(input);
+
+  if (!callItem || !toolOutput?.ok) {
+    return null;
+  }
+
+  if (callItem.name === "list_customer_orders") {
+    const latestOrder = toolOutput.orders?.[0];
+    if (!latestOrder?.orderNumber) {
+      return null;
+    }
+
+    if (isRefundRequest(message)) {
+      return {
+        name: "get_return_options",
+        args: {
+          orderNumber: latestOrder.orderNumber
+        }
+      };
+    }
+
+    if (isCancellationRequest(message)) {
+      return {
+        name: "get_cancellation_options",
+        args: {
+          orderNumber: latestOrder.orderNumber
+        }
+      };
+    }
+
+    if (isOrderItemsFollowUp(message) || isOrderCorrectionFollowUp(message) || hasRecentOrderContext(turns)) {
+      return {
+        name: "get_order_details",
+        args: {
+          orderNumber: latestOrder.orderNumber
+        }
+      };
+    }
+  }
+
+  return null;
 }
 
 function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
@@ -232,6 +431,20 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
     }
 
     const order = toolOutput.order;
+    if (isOrderCorrectionFollowUp(message)) {
+      return buildStructuredReply({
+        intent: "order_tracking",
+        reply: `You're right. Based on the visible order I have:\nOrder ${order.orderNumber} includes:\n- ${order.items.join("\n- ")}`
+      });
+    }
+
+    if (isOrderItemsFollowUp(message)) {
+      return buildStructuredReply({
+        intent: "order_tracking",
+        reply: `Order ${order.orderNumber} includes:\n- ${order.items.join("\n- ")}`
+      });
+    }
+
     if (/[\u0600-\u06FF]/.test(message)) {
       return buildStructuredReply({
         intent: "order_tracking",
@@ -277,7 +490,9 @@ function renderFinalPayload(message, toolName, toolArgs, toolOutput) {
   if (toolName === "get_return_options") {
     return buildStructuredReply({
       intent: "returns_refunds",
-      reply: toolOutput.ok ? toolOutput.eligibility.reason : toolOutput.message,
+      reply: toolOutput.ok
+        ? `I checked order ${toolOutput.order.orderNumber}. ${toolOutput.eligibility.reason}`
+        : toolOutput.message,
       confidence: toolOutput.ok ? 0.9 : 0.75,
       resolution:
         toolOutput.ok
@@ -354,8 +569,7 @@ function createMockOpenRouterFetch() {
       .find((item) => item?.type === "function_call_output");
 
     if (!toolOutputItem) {
-      const message = extractUserMessage(body.input);
-      const toolCall = planToolCall(message);
+      const toolCall = planToolCall(body.input);
       const callId = `call_${++responseCounter}`;
 
       return createJsonResponse({
@@ -374,6 +588,28 @@ function createMockOpenRouterFetch() {
     const message = extractUserMessage(body.input);
     const callItem = [...body.input].reverse().find((item) => item?.type === "function_call");
     const toolOutput = normalizeToolOutput(toolOutputItem.output);
+    const nextToolCall = planFollowUpToolCall({
+      input: body.input,
+      callItem,
+      toolOutput
+    });
+
+    if (nextToolCall) {
+      const callId = `call_${++responseCounter}`;
+
+      return createJsonResponse({
+        id: `resp_${responseCounter}`,
+        output: [
+          {
+            type: "function_call",
+            name: nextToolCall.name,
+            call_id: callId,
+            arguments: JSON.stringify(nextToolCall.args)
+          }
+        ]
+      });
+    }
+
     const toolArgs = (() => {
       try {
         return JSON.parse(callItem.arguments);
@@ -460,7 +696,7 @@ test("defaults to DeepSeek V3.2 instead of a generic free router", () => {
   assert.equal(status.freeOnly, false);
 });
 
-test("sends a low-cost DeepSeek request profile for simple turns", async () => {
+test("sends a model-driven DeepSeek request profile for simple turns", async () => {
   const bodies = [];
 
   await withMockedOpenRouter(async () => {
@@ -474,17 +710,18 @@ test("sends a low-cost DeepSeek request profile for simple turns", async () => {
   const firstBody = bodies[0];
   assert.equal(firstBody.model, "deepseek/deepseek-v3.2");
   assert.equal(firstBody.temperature, 0.2);
-  assert.equal(firstBody.max_output_tokens, 450);
+  assert.equal(firstBody.max_output_tokens, 800);
   assert.equal(firstBody.tool_choice, "auto");
   assert.equal(firstBody.provider?.require_parameters, true);
   assert.equal(firstBody.provider?.data_collection, "deny");
-  assert.equal(firstBody.provider?.sort, "price");
+  assert.equal(firstBody.provider?.sort, undefined);
   assert.equal(firstBody.reasoning?.enabled, false);
   assert.match(firstBody.user, /^support_[a-f0-9]{24}$/);
-  assert.doesNotMatch(firstBody.instructions, /Recent conversation|Current shopper context/i);
+  assert.match(firstBody.instructions, /Trusted storefront knowledge available on every turn/i);
+  assert.match(firstBody.instructions, /Current session support context/i);
 });
 
-test("forces tool usage for sensitive profile turns and keeps deterministic order turns off the provider path", async () => {
+test("keeps tool selection model-driven even for sensitive profile and order turns", async () => {
   const bodies = [];
 
   await withMockedOpenRouter(async () => {
@@ -511,13 +748,14 @@ test("forces tool usage for sensitive profile turns and keeps deterministic orde
     !(body.input ?? []).some((item) => item?.type === "function_call_output")
   );
 
-  assert.equal(initialBodies[0].tool_choice?.type, "function");
-  assert.equal(initialBodies[0].tool_choice?.name, "get_customer_profile");
+  assert.equal(initialBodies.length, 2);
+  assert.equal(initialBodies[0].tool_choice, "auto");
+  assert.equal(initialBodies[1].tool_choice, "auto");
   assert.equal(initialBodies[0].provider?.sort, undefined);
-  assert.equal(initialBodies.length, 1);
+  assert.equal(initialBodies[1].provider?.sort, undefined);
 });
 
-test("requires a tool call for ambiguous post-order turns instead of leaving them fully optional", async () => {
+test("lets the model choose tools for ambiguous post-order turns", async () => {
   const bodies = [];
 
   await withMockedOpenRouter(async () => {
@@ -535,7 +773,7 @@ test("requires a tool call for ambiguous post-order turns instead of leaving the
     !(body.input ?? []).some((item) => item?.type === "function_call_output")
   );
 
-  assert.equal(initialBody.tool_choice, "required");
+  assert.equal(initialBody.tool_choice, "auto");
   assert.equal(initialBody.provider?.sort, undefined);
   assert.equal(initialBody.max_tool_calls, 6);
 });
@@ -770,7 +1008,7 @@ test("does not reuse a handoff across different shopper identities in the same s
   });
 });
 
-test("does not expose the handoff tool for vague non-handoff chatter", async () => {
+test("keeps the handoff tool available while instructions discourage unnecessary use", async () => {
   const bodies = [];
 
   await withMockedOpenRouter(async () => {
@@ -787,7 +1025,7 @@ test("does not expose the handoff tool for vague non-handoff chatter", async () 
 
   assert.ok(initialBody);
   assert.ok(Array.isArray(initialBody.tools));
-  assert.equal(initialBody.tools.some((tool) => tool.name === "create_handoff"), false);
+  assert.equal(initialBody.tools.some((tool) => tool.name === "create_handoff"), true);
 });
 
 test("answers privacy questions from policy data instead of guessing", async () => {
@@ -1006,21 +1244,8 @@ test("uses the newest visible order when the shopper asks for the latest order",
   });
 });
 
-test("answers generic where-is-my-order asks from trusted visible orders without OpenRouter", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for deterministic order tracking."
-      }
-    }, 500);
-  };
-
-  try {
+test("answers generic where-is-my-order asks from trusted visible orders through the AI tool loop", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "generic-order-tracking-local",
@@ -1045,35 +1270,13 @@ test("answers generic where-is-my-order asks from trusted visible orders without
 
     assert.equal(result.intent, "order_tracking");
     assert.equal(result.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(result.reply, /KS-10590/);
     assert.match(result.reply, /Processing|Expected to ship tomorrow/);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
-test("answers payment-method questions from trusted policy data without OpenRouter", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for deterministic policy answers."
-      }
-    }, 500);
-  };
-
-  try {
+test("answers payment-method questions from trusted policy data through the AI tool loop", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "payment-policy-local",
@@ -1082,34 +1285,12 @@ test("answers payment-method questions from trusted policy data without OpenRout
 
     assert.equal(result.intent, "policy_info");
     assert.equal(result.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(result.reply, /mada|Visa|Mastercard|Apple Pay|Cash on Delivery/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
 test("lists items for latest-order follow-up questions without falling back to the catalog", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for deterministic order follow-ups."
-      }
-    }, 500);
-  };
-
-  try {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     await bot.chat({
@@ -1156,36 +1337,14 @@ test("lists items for latest-order follow-up questions without falling back to t
 
     assert.equal(itemsResult.intent, "order_tracking");
     assert.equal(itemsResult.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(itemsResult.reply, /KS-10540/);
     assert.match(itemsResult.reply, /Mechanical Keyboard/);
     assert.doesNotMatch(itemsResult.reply, /Here are the main categories we currently carry/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
 test("rebuilds order follow-up context from browser conversation history after server memory is lost", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for history-backed deterministic order follow-ups."
-      }
-    }, 500);
-  };
-
-  try {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "browser-history-order-follow-up",
@@ -1216,35 +1375,68 @@ test("rebuilds order follow-up context from browser conversation history after s
 
     assert.equal(result.intent, "order_tracking");
     assert.equal(result.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(result.reply, /KS-10540/);
     assert.match(result.reply, /Mechanical Keyboard/);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
+  });
+});
 
-    global.fetch = previousFetch;
-  }
+test("treats order-content corrections as order follow-ups instead of product lookups", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+
+    await bot.chat({
+      sessionId: "order-correction-follow-up",
+      message: "where is my order",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    const correction = await bot.chat({
+      sessionId: "order-correction-follow-up",
+      message: "what you are wtin mine include Items: 1x Mechanical Keyboard only",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(correction.intent, "order_tracking");
+    assert.equal(correction.structured?.resolution, "answered");
+    assert.match(correction.reply, /You're right|Based on the visible order/i);
+    assert.match(correction.reply, /KS-10540/);
+    assert.match(correction.reply, /Mechanical Keyboard/);
+    assert.doesNotMatch(correction.reply, /Price:|Availability:|Highlights:/i);
+  });
 });
 
 test("treats a bare order number as an order follow-up when recent order context exists", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for deterministic bare order follow-ups."
-      }
-    }, 500);
-  };
-
-  try {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     await bot.chat({
@@ -1290,18 +1482,9 @@ test("treats a bare order number as an order follow-up when recent order context
     });
 
     assert.equal(followUp.intent, "order_tracking");
-    assert.equal(fetchCalls, 0);
     assert.match(followUp.reply, /KS-10540/);
     assert.doesNotMatch(followUp.reply, /ORDER_4/);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
 test("does not treat anonymous browser-provided orders as verified order access", async () => {
@@ -1331,7 +1514,7 @@ test("does not treat anonymous browser-provided orders as verified order access"
   });
 });
 
-test("asks for an order number instead of pretending a refund request simply failed lookup", async () => {
+test("can use the shopper's visible order when a refund request is otherwise ambiguous", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
@@ -1344,8 +1527,40 @@ test("asks for an order number instead of pretending a refund request simply fai
     });
 
     assert.equal(result.intent, "returns_refunds");
-    assert.equal(result.structured?.resolution, "order_number_required");
-    assert.match(result.reply, /need the order number first/i);
+    assert.equal(result.structured?.resolution, "answered");
+    assert.match(result.reply, /KS-10388|return|refund/i);
+  });
+});
+
+test("uses the latest visible order for refund requests through the AI tool loop", async () => {
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "deterministic-refund-latest-order",
+      message: "I want help with a refund",
+      customerProfile: {
+        name: "Abdullatif Eida",
+        email: "asds@ada.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Abdullatif Eida",
+          email: "asds@ada.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ]
+    });
+
+    assert.equal(result.intent, "returns_refunds");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.match(result.reply, /KS-10540/);
+    assert.match(result.reply, /return|refund/i);
   });
 });
 
@@ -1369,12 +1584,12 @@ test("returns a clear configuration error when the OpenRouter key is missing", a
   }
 });
 
-test("returns grounded product details without depending on a model tool-choice step", async () => {
+test("returns a configuration error for product details when the AI key is missing", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
   delete process.env.OPENROUTER_API_KEY;
   global.fetch = async () => {
-    throw new Error("fetch should not be called for deterministic catalog lookups");
+    throw new Error("fetch should not be called when the OpenRouter key is missing");
   };
 
   try {
@@ -1384,11 +1599,8 @@ test("returns grounded product details without depending on a model tool-choice 
       message: "Tell me about the Wireless Mouse"
     });
 
-    assert.equal(result.intent, "product_information");
-    assert.match(result.reply, /Wireless Mouse/);
-    assert.match(result.reply, /27\.29 SAR/);
-    assert.match(result.reply, /Ergonomic wireless mouse/);
-    assert.match(result.reply, /In stock/i);
+    assert.equal(result.intent, "configuration_error");
+    assert.match(result.reply, /OpenRouter API key is missing/i);
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;
@@ -1400,12 +1612,12 @@ test("returns grounded product details without depending on a model tool-choice 
   }
 });
 
-test("resolves follow-up product detail requests from recent catalog context", async () => {
+test("returns a configuration error for product follow-ups when the AI key is missing", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;
   delete process.env.OPENROUTER_API_KEY;
   global.fetch = async () => {
-    throw new Error("fetch should not be called for deterministic follow-up catalog lookups");
+    throw new Error("fetch should not be called when the OpenRouter key is missing");
   };
 
   try {
@@ -1419,12 +1631,9 @@ test("resolves follow-up product detail requests from recent catalog context", a
       message: "ok give me the details of it plz"
     });
 
-    assert.equal(first.intent, "product_information");
-    assert.equal(second.intent, "product_information");
-    assert.match(second.reply, /Wireless Mouse/);
-    assert.match(second.reply, /27\.29 SAR/);
-    assert.match(second.reply, /Black/);
-    assert.match(second.reply, /Medium/);
+    assert.equal(first.intent, "configuration_error");
+    assert.equal(second.intent, "configuration_error");
+    assert.match(second.reply, /OpenRouter API key is missing/i);
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;
@@ -1670,8 +1879,8 @@ test("retries with relaxed provider routing when OpenRouter cannot satisfy stric
       message: "How do returns work?"
     });
 
-    assert.equal(result.intent, "returns_refunds");
-    assert.equal(result.structured?.resolution, "order_number_required");
+    assert.equal(result.intent, "policy_info");
+    assert.equal(result.structured?.resolution, "answered");
     assert.equal(requestedBodies[0].provider?.require_parameters, true);
     assert.equal(requestedBodies[1].provider, undefined);
     assert.equal(requestedBodies[1].reasoning, undefined);
@@ -1722,21 +1931,8 @@ test("returns a shopper-safe message when the OpenRouter path is rate limited", 
   }
 });
 
-test("answers travel recommendations from the local catalog even when OpenRouter is unavailable", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Upstream provider should not be used for deterministic catalog turns."
-      }
-    }, 500);
-  };
-
-  try {
+test("answers travel recommendations through the AI tool loop", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "travel-recommendations-local",
@@ -1745,34 +1941,12 @@ test("answers travel recommendations from the local catalog even when OpenRouter
 
     assert.equal(result.intent, "recommendations");
     assert.equal(result.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(result.reply, /External SSD|Portable Power Bank|Bluetooth Speaker|USB-C Hub/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
 test("offers grounded alternative recommendations instead of inventing products", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for deterministic recommendation follow-ups."
-      }
-    }, 500);
-  };
-
-  try {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
 
     await bot.chat({
@@ -1786,35 +1960,13 @@ test("offers grounded alternative recommendations instead of inventing products"
     });
 
     assert.equal(result.intent, "recommendations");
-    assert.equal(fetchCalls, 0);
     assert.doesNotMatch(result.reply, /Travel Backpack|Portable Charger|Travel Pillow/i);
-    assert.match(result.reply, /Mechanical Keyboard|Laptop Stand|Smart Home Camera|Wireless Mouse/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+    assert.match(result.reply, /External SSD|Gaming Headset|Smartwatch|USB-C Hub|Wireless Mouse|Laptop Stand/i);
+  });
 });
 
-test("uses local category browsing for broad catalog asks like electronics", async () => {
-  const previousKey = process.env.OPENROUTER_API_KEY;
-  const previousFetch = global.fetch;
-  process.env.OPENROUTER_API_KEY = "test-key";
-  let fetchCalls = 0;
-  global.fetch = async () => {
-    fetchCalls += 1;
-    return createJsonResponse({
-      error: {
-        message: "Provider should not be used for category browsing."
-      }
-    }, 500);
-  };
-
-  try {
+test("uses the AI tool loop for broad catalog asks like electronics", async () => {
+  await withMockedOpenRouter(async () => {
     const bot = createChatbot();
     const result = await bot.chat({
       sessionId: "electronics-browse-local",
@@ -1823,17 +1975,8 @@ test("uses local category browsing for broad catalog asks like electronics", asy
 
     assert.equal(result.intent, "catalog_browse");
     assert.equal(result.structured?.resolution, "answered");
-    assert.equal(fetchCalls, 0);
     assert.match(result.reply, /Wireless Mouse|Mechanical Keyboard|Bluetooth Speaker|USB-C Hub/i);
-  } finally {
-    if (previousKey === undefined) {
-      delete process.env.OPENROUTER_API_KEY;
-    } else {
-      process.env.OPENROUTER_API_KEY = previousKey;
-    }
-
-    global.fetch = previousFetch;
-  }
+  });
 });
 
 test("reuses the in-flight promise for the same message and blocks different ones until it completes", async () => {
@@ -2026,8 +2169,7 @@ test("sanitizes upstream tool failures before they reach the shopper", async () 
       .find((item) => item?.type === "function_call_output");
 
     if (!toolOutputItem) {
-      const message = extractUserMessage(body.input);
-      const toolCall = planToolCall(message);
+      const toolCall = planToolCall(body.input);
       const callId = `call_${++responseCounter}`;
 
       return createJsonResponse({
