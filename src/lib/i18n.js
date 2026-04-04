@@ -5,16 +5,16 @@
 const copy = {
   en: {
     welcome:
-      "Hi, I'm Lean Assist. I can help with product information, recommendations, order tracking, delivery questions, returns/refunds, cancellations, payment questions, privacy and terms, or connect you to a human agent.",
+      "Hi, I'm your support assistant. I can help with product information, recommendations, order tracking, delivery questions, returns or refunds, cancellations, payment questions, privacy and terms, or connect you to a human agent.",
     greeting:
       "Hi there. I can help you choose a product, compare options, track an order, explain returns, answer payment or policy questions, or connect you to a human agent. What would you like to do?",
     generalHelp:
-      "Absolutely. You can ask me things like: recommend a product, compare products, show what products you sell, explain product details, track an order with a number like KS-10421, explain returns and refunds, answer payment or privacy questions, or connect you to a human agent.",
+      "Absolutely. You can ask me to recommend a product, compare products, explain product details, check your latest order, look up a specific order, explain returns and refunds, answer payment or privacy questions, or connect you to a human agent.",
     catalogBrowse:
       "I can show you products by category or recommend the right option for your use case. Tell me a category like accessories, smart home, wearables, or audio, or say what you need it for, like travel, work, or home.",
     personalizedWelcome:
       "Hi {name}, thanks for sharing your details. I’m ready to help with products, orders, returns, delivery, payments, privacy and legal questions, or a human handoff.",
-    askOrderNumber: "Please share your order number, for example KS-10421.",
+    askOrderNumber: "Please share your order number if you have it, or ask me to check your latest order.",
     askProductName:
       "Tell me the product name, category, or what you need it for, and I’ll narrow the options for you.",
     askUseCase:
@@ -26,7 +26,7 @@ const copy = {
     handoff:
       "I've created a human support handoff recommendation with the issue summary so an agent can continue quickly.",
     fallback:
-      "I’m not fully confident I understood that yet, but I can still help. Try asking for a product by name or category, ask me to show products, share an order number like KS-10421, ask about returns, payments, privacy, or say you want a human agent.",
+      "I’m not fully confident I understood that yet, but I can still help. Try asking about a product, your latest order, a specific order number, returns, payments, privacy, or ask for a human agent.",
     orderNotFound:
       "I couldn't find {orderNumber}. Please double-check the order number or ask for a human agent.",
     productDetails:
@@ -65,16 +65,16 @@ const copy = {
   },
   ar: {
     welcome:
-      "مرحباً، أنا Lean Assist. أستطيع مساعدتك في معلومات المنتجات، الترشيحات، تتبع الطلبات، أسئلة التوصيل، الإرجاع والاسترداد، الإلغاء، الدفع، وسياسة الخصوصية والشروط، أو تحويلك إلى موظف خدمة عملاء.",
+      "مرحباً، أنا مساعد الدعم الخاص بك. أستطيع مساعدتك في معلومات المنتجات، الترشيحات، تتبع الطلبات، أسئلة التوصيل، الإرجاع والاسترداد، الإلغاء، الدفع، وسياسة الخصوصية والشروط، أو تحويلك إلى موظف خدمة عملاء.",
     greeting:
       "مرحباً بك. أستطيع مساعدتك في اختيار منتج، مقارنة الخيارات، تتبع الطلب، شرح الإرجاع والاسترداد، الإجابة عن الدفع والسياسات، أو تحويلك إلى موظف خدمة عملاء. كيف أقدر أساعدك؟",
     generalHelp:
-      "أكيد. يمكنك أن تسألني مثلاً عن ترشيح منتج، مقارنة المنتجات، عرض المنتجات المتوفرة، شرح تفاصيل منتج، تتبع طلب برقم مثل KS-10421، شرح الإرجاع والاسترداد، الإجابة عن الدفع أو الخصوصية، أو التحويل إلى موظف خدمة عملاء.",
+      "أكيد. يمكنك أن تسألني عن ترشيح منتج، مقارنة المنتجات، شرح تفاصيل منتج، التحقق من آخر طلب لك، مراجعة طلب محدد، شرح الإرجاع والاسترداد، الإجابة عن الدفع أو الخصوصية، أو التحويل إلى موظف خدمة عملاء.",
     catalogBrowse:
       "أستطيع عرض المنتجات حسب الفئة أو ترشيح الأنسب حسب استخدامك. اذكر فئة مثل الإكسسوارات أو المنزل الذكي أو الصوتيات، أو اذكر الاستخدام مثل السفر أو العمل أو المنزل.",
     personalizedWelcome:
       "مرحباً {name}، شكرًا لمشاركة بياناتك. أنا جاهز لمساعدتك في المنتجات، الطلبات، الإرجاع، التوصيل، الدفع، وأسئلة الخصوصية والشروط، أو التحويل إلى موظف خدمة عملاء.",
-    askOrderNumber: "يرجى مشاركة رقم الطلب، مثل KS-10421.",
+    askOrderNumber: "يرجى مشاركة رقم الطلب إن كان متوفراً، أو اطلب مني التحقق من آخر طلب لك.",
     askProductName:
       "اذكر اسم المنتج أو الفئة أو الغرض الذي تحتاجه له، وسأرشح لك الأنسب.",
     askUseCase:
@@ -85,7 +85,7 @@ const copy = {
     handoff:
       "أنشأت ملخصاً للتحويل إلى موظف خدمة العملاء حتى يتمكن من المتابعة بسرعة.",
     fallback:
-      "قد لا أكون فهمت طلبك بالكامل بعد، لكن ما زلت أستطيع مساعدتك. جرّب أن تذكر اسم المنتج أو الفئة، أو اطلب مني عرض المنتجات، أو شاركني رقم طلب مثل KS-10421، أو اسأل عن الإرجاع أو الدفع أو الخصوصية، أو اطلب موظف خدمة عملاء.",
+      "قد لا أكون فهمت طلبك بالكامل بعد، لكن ما زلت أستطيع مساعدتك. جرّب أن تسأل عن منتج، أو آخر طلب لك، أو رقم طلب محدد، أو الإرجاع أو الدفع أو الخصوصية، أو اطلب موظف خدمة عملاء.",
     orderNotFound:
       "لم أتمكن من العثور على الطلب {orderNumber}. يرجى التحقق من الرقم أو طلب التحويل إلى موظف خدمة عملاء.",
     productDetails:

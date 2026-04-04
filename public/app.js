@@ -21743,10 +21743,10 @@ var storePolicies = {
       en: [
         "Customers must be at least 18 years old or have legal consent to use the site.",
         "Users must provide accurate account and purchase information and must not misuse the website.",
-        "Product descriptions and prices can change, and Lean Market may correct pricing errors.",
+        "Product descriptions and prices can change, and the merchant may correct pricing errors.",
         "Payments are processed securely via Amazon Payment Services, and all related fees and taxes remain payable.",
         "Delivery times are estimated, not guaranteed, and risk of loss passes to the customer upon delivery.",
-        "Website content such as logos, text, and images belongs to Lean Market.",
+        "Website content such as logos, text, and images belongs to the merchant.",
         "Products are provided as-is, and the site limits liability for indirect or consequential damages.",
         "The terms are governed by the laws of the Kingdom of Saudi Arabia and may be updated at any time."
       ],
@@ -21756,7 +21756,7 @@ var storePolicies = {
         "\u0642\u062F \u062A\u062A\u063A\u064A\u0631 \u0623\u0648\u0635\u0627\u0641 \u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u0648\u0627\u0644\u0623\u0633\u0639\u0627\u0631\u060C \u0648\u064A\u062D\u0642 \u0644\u0644\u0645\u062A\u062C\u0631 \u062A\u0635\u062D\u064A\u062D \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u062A\u0633\u0639\u064A\u0631.",
         "\u062A\u062A\u0645 \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u062F\u0641\u0648\u0639\u0627\u062A \u0628\u0623\u0645\u0627\u0646 \u0639\u0628\u0631 Amazon Payment Services\u060C \u0648\u064A\u0638\u0644 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0633\u0624\u0648\u0644\u0627\u064B \u0639\u0646 \u0627\u0644\u0631\u0633\u0648\u0645 \u0648\u0627\u0644\u0636\u0631\u0627\u0626\u0628 \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0627\u0644\u0634\u0631\u0627\u0621.",
         "\u0623\u0648\u0642\u0627\u062A \u0627\u0644\u062A\u0648\u0635\u064A\u0644 \u062A\u0642\u062F\u064A\u0631\u064A\u0629 \u0648\u0644\u064A\u0633\u062A \u0645\u0636\u0645\u0648\u0646\u0629\u060C \u0648\u062A\u0646\u062A\u0642\u0644 \u0645\u0633\u0624\u0648\u0644\u064A\u0629 \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0634\u062D\u0646\u0629 \u0625\u0644\u0649 \u0627\u0644\u0639\u0645\u064A\u0644 \u0639\u0646\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645.",
-        "\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0648\u0642\u0639 \u0645\u062B\u0644 \u0627\u0644\u0634\u0639\u0627\u0631\u0627\u062A \u0648\u0627\u0644\u0646\u0635\u0648\u0635 \u0648\u0627\u0644\u0635\u0648\u0631 \u0645\u0645\u0644\u0648\u0643 \u0644\u0640 Lean Market.",
+        "\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0648\u0642\u0639 \u0645\u062B\u0644 \u0627\u0644\u0634\u0639\u0627\u0631\u0627\u062A \u0648\u0627\u0644\u0646\u0635\u0648\u0635 \u0648\u0627\u0644\u0635\u0648\u0631 \u0645\u0645\u0644\u0648\u0643 \u0644\u0644\u062A\u0627\u062C\u0631.",
         "\u0627\u0644\u0645\u0646\u062A\u062C\u0627\u062A \u062A\u064F\u0628\u0627\u0639 \u0643\u0645\u0627 \u0647\u064A\u060C \u0645\u0639 \u062A\u062D\u062F\u064A\u062F \u0645\u0633\u0624\u0648\u0644\u064A\u0629 \u0627\u0644\u0645\u062A\u062C\u0631 \u0639\u0646 \u0627\u0644\u0623\u0636\u0631\u0627\u0631 \u063A\u064A\u0631 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629 \u0623\u0648 \u0627\u0644\u062A\u0628\u0639\u064A\u0629.",
         "\u062A\u062E\u0636\u0639 \u0627\u0644\u0634\u0631\u0648\u0637 \u0644\u0642\u0648\u0627\u0646\u064A\u0646 \u0627\u0644\u0645\u0645\u0644\u0643\u0629 \u0627\u0644\u0639\u0631\u0628\u064A\u0629 \u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629\u060C \u0648\u0642\u062F \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062B\u0647\u0627 \u0641\u064A \u0623\u064A \u0648\u0642\u062A."
       ]
@@ -22231,7 +22231,7 @@ var localized = {
       {
         id: "wearables",
         eyebrow: "Smart watches",
-        title: "A demo that supports every step.",
+        title: "Support that helps at every step.",
         subtitle: "Clear products, easier decisions, and support before and after purchase.",
         cta: "Explore watch",
         supportCta: "Chat with us",
@@ -22278,7 +22278,7 @@ var localized = {
       {
         id: "earbuds",
         title: "Noise Cancelling Earbuds",
-        subtitle: "Used in the tracking and refund journeys for the support demo.",
+        subtitle: "A strong example for post-purchase support, delivery, and returns.",
         price: "SAR 104.99",
         accent: "visual-audio",
         prompt: "Tell me about the Noise Cancelling Earbuds"
@@ -22316,10 +22316,10 @@ var localized = {
       tax: "Tax",
       total: "Total",
       clearCart: "Clear cart",
-      placeDemoOrder: "Create demo order",
+      placeDemoOrder: "Create order",
       creatingOrder: "Creating order...",
       orderCreated: "Order created",
-      orderCreateFailed: "We couldn't create the demo order right now. Please try again.",
+      orderCreateFailed: "We couldn't create the order right now. Please try again.",
       orders: "Orders",
       orderItems: "Items",
       orderStatus: "Status",
@@ -22330,6 +22330,7 @@ var localized = {
       storeFeatures: "Store features",
       analytics: "View support log",
       analyticsTitle: "Recent analytics events",
+      analyticsSummaryTitle: "Journey summary",
       testimonials: "Customer reviews",
       policies: "Policies and trust",
       footerLinks: "Important links",
@@ -22371,7 +22372,7 @@ var localized = {
       terms: "Terms & conditions",
       returns: "Returns and exchange policy",
       privacy: "Usage and privacy policy",
-      storeBlurb: "A support-first demo showing how a smart assistant fits inside a KSA e-commerce storefront."
+      storeBlurb: "A support-first storefront showing how an AI agent can assist across a modern e-commerce journey."
     },
     widget: {
       homeTitle: "Hi there",
@@ -22390,8 +22391,8 @@ var localized = {
       chatTab: "Chat",
       previous: "Previous messages",
       quickActions: [
-        "Where is my order KS-10421?",
-        "I want a refund for KS-10388",
+        "Where is my latest order?",
+        "I want help with a refund",
         "Recommend the best product for travel",
         "What payment methods do you support?",
         "What data do you collect?",
@@ -22403,14 +22404,15 @@ var localized = {
       menuNewChat: "New chat",
       menuClose: "Close",
       poweredLabel: "POWERED BY",
-      poweredBrand: "LEAN ASSIST",
+      poweredBrand: "AI SUPPORT",
       meta: "Intent coverage: product info, tracking, returns, handoff",
       typing: "Typing\u2026",
-      afterIntro: "Thanks {name}. I\u2019ve saved your details and I\u2019m ready to help. What would you like to do first?"
+      afterIntro: "Thanks {name}. I\u2019ve saved your details and I\u2019m ready to help. What would you like to do first?",
+      orderCreatedFollowUp: "Your order {orderNumber} has been created. I can track it for you, explain the status, or check the shopper profile saved for this session."
     },
     brand: {
-      title: "Lean Souq",
-      subtitle: "Smart support commerce"
+      title: "Support Commerce",
+      subtitle: "AI-assisted storefront"
     }
   },
   ar: {
@@ -22431,7 +22433,7 @@ var localized = {
       {
         id: "wearables",
         eyebrow: "\u0633\u0627\u0639\u0627\u062A \u0630\u0643\u064A\u0629",
-        title: "\u062F\u064A\u0645\u0648 \u064A\u062E\u062F\u0645\u0643 \u0641\u064A \u0643\u0644 \u0644\u062D\u0638\u0629",
+        title: "\u062F\u0639\u0645 \u064A\u0633\u0627\u0639\u062F\u0643 \u0641\u064A \u0643\u0644 \u0644\u062D\u0638\u0629",
         subtitle: "\u0645\u0646\u062A\u062C\u0627\u062A \u0648\u0627\u0636\u062D\u0629\u060C \u0648\u0645\u0633\u0627\u0639\u062F \u062F\u0639\u0645 \u062C\u0627\u0647\u0632 \u0644\u0644\u0623\u0633\u0626\u0644\u0629 \u0642\u0628\u0644 \u0648\u0628\u0639\u062F \u0627\u0644\u0634\u0631\u0627\u0621.",
         cta: "\u0627\u0643\u062A\u0634\u0641 \u0627\u0644\u0633\u0627\u0639\u0629",
         supportCta: "\u062A\u062D\u062F\u062B \u0645\u0639\u0646\u0627",
@@ -22478,7 +22480,7 @@ var localized = {
       {
         id: "earbuds",
         title: "\u0633\u0645\u0627\u0639\u0627\u062A \u0639\u0627\u0632\u0644\u0629 \u0644\u0644\u0636\u0648\u0636\u0627\u0621",
-        subtitle: "\u0645\u0646\u062A\u062C \u0645\u0646\u0627\u0633\u0628 \u0644\u062A\u062C\u0627\u0631\u0628 \u0627\u0644\u062A\u062A\u0628\u0639 \u0648\u0627\u0644\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u062F\u0627\u062E\u0644 \u0627\u0644\u062F\u064A\u0645\u0648.",
+        subtitle: "\u0645\u0646\u062A\u062C \u0645\u0646\u0627\u0633\u0628 \u0644\u0633\u064A\u0646\u0627\u0631\u064A\u0648\u0647\u0627\u062A \u0627\u0644\u062F\u0639\u0645 \u0628\u0639\u062F \u0627\u0644\u0634\u0631\u0627\u0621 \u0648\u0627\u0644\u0634\u062D\u0646 \u0648\u0627\u0644\u0627\u0633\u062A\u0631\u062C\u0627\u0639.",
         price: "\u0661\u0660\u0664\u066B\u0669\u0669 \u0631.\u0633",
         accent: "visual-audio",
         prompt: "\u0623\u0631\u064A\u062F \u0645\u0639\u0631\u0641\u0629 \u062A\u0641\u0627\u0635\u064A\u0644 \u0633\u0645\u0627\u0639\u0627\u062A \u0639\u0627\u0632\u0644\u0629 \u0644\u0644\u0636\u0648\u0636\u0627\u0621"
@@ -22492,7 +22494,7 @@ var localized = {
         prompt: "\u0623\u062D\u062A\u0627\u062C \u0645\u0633\u0627\u0639\u062F\u0629 \u0644\u0627\u062E\u062A\u064A\u0627\u0631 \u0634\u0627\u062D\u0646 \u0633\u0631\u064A\u0639"
       }
     ],
-    supportKicker: "\u062C\u0648\u0647\u0631 \u0627\u0644\u062F\u064A\u0645\u0648",
+    supportKicker: "\u062C\u0648\u0647\u0631 \u0627\u0644\u062A\u062C\u0631\u0628\u0629",
     supportTitle: "\u0627\u0644\u062F\u0639\u0645 \u0647\u0648 \u0623\u0648\u0644 \u0634\u064A\u0621 \u0646\u0635\u0644\u062D\u0647 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062A\u062C\u0631",
     supportBody: "\u0628\u062F\u0644 \u0627\u0646\u062A\u0638\u0627\u0631 8-12 \u0633\u0627\u0639\u0627\u062A\u060C \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u064A\u0642\u062F\u0631 \u064A\u0633\u0623\u0644 \u0639\u0646 \u0627\u0644\u0645\u0646\u062A\u062C\u060C \u064A\u062A\u0627\u0628\u0639 \u0637\u0644\u0628\u0647\u060C \u064A\u0639\u0631\u0641 \u0634\u0631\u0648\u0637 \u0627\u0644\u0625\u0631\u062C\u0627\u0639\u060C \u0623\u0648 \u064A\u062A\u062D\u0648\u0644 \u0644\u0645\u0648\u0638\u0641 \u062E\u062F\u0645\u0629 \u0639\u0645\u0644\u0627\u0621 \u0645\u0646 \u0646\u0641\u0633 \u0627\u0644\u0648\u0627\u062C\u0647\u0629.",
     supportPoints: ["\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0645\u0646\u062A\u062C\u0627\u062A", "\u062A\u062A\u0628\u0639 \u0627\u0644\u0637\u0644\u0628\u0627\u062A", "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0627\u0633\u062A\u0628\u062F\u0627\u0644", "\u062A\u0635\u0639\u064A\u062F \u0628\u0634\u0631\u064A"],
@@ -22530,6 +22532,7 @@ var localized = {
       storeFeatures: "\u0645\u0645\u064A\u0632\u0627\u062A \u0627\u0644\u0645\u062A\u062C\u0631",
       analytics: "\u0639\u0631\u0636 \u0633\u062C\u0644 \u0627\u0644\u062F\u0639\u0645",
       analyticsTitle: "\u0623\u062D\u062F\u062B \u0623\u062D\u062F\u0627\u062B \u0633\u062C\u0644 \u0627\u0644\u062F\u0639\u0645",
+      analyticsSummaryTitle: "\u0645\u0644\u062E\u0635 \u0627\u0644\u0631\u062D\u0644\u0627\u062A",
       testimonials: "\u0622\u0631\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u0627\u0621",
       policies: "\u0627\u0644\u0633\u064A\u0627\u0633\u0627\u062A \u0648\u0627\u0644\u062B\u0642\u0629",
       footerLinks: "\u0631\u0648\u0627\u0628\u0637 \u0645\u0647\u0645\u0629",
@@ -22590,8 +22593,8 @@ var localized = {
       chatTab: "\u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629",
       previous: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0633\u0627\u0628\u0642\u0629",
       quickActions: [
-        "\u0623\u064A\u0646 \u0637\u0644\u0628\u064A KS-10421\u061F",
-        "\u0623\u0631\u064A\u062F \u0627\u0633\u062A\u0631\u062F\u0627\u062F \u0627\u0644\u0637\u0644\u0628 KS-10388",
+        "\u0623\u064A\u0646 \u0622\u062E\u0631 \u0637\u0644\u0628 \u0644\u064A\u061F",
+        "\u0623\u0631\u064A\u062F \u0645\u0633\u0627\u0639\u062F\u0629 \u0641\u064A \u0627\u0644\u0627\u0633\u062A\u0631\u062F\u0627\u062F",
         "\u0631\u0634\u062D \u0644\u064A \u0623\u0641\u0636\u0644 \u0645\u0646\u062A\u062C \u0644\u0644\u0633\u0641\u0631",
         "\u0645\u0627 \u0637\u0631\u0642 \u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u0645\u062A\u0627\u062D\u0629\u061F",
         "\u0645\u0627 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u064A \u062A\u062C\u0645\u0639\u0648\u0646\u0647\u0627\u061F",
@@ -22603,14 +22606,15 @@ var localized = {
       menuNewChat: "\u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629",
       menuClose: "\u0625\u063A\u0644\u0627\u0642",
       poweredLabel: "\u0645\u0634\u063A\u0644 \u0628\u0648\u0627\u0633\u0637\u0629",
-      poweredBrand: "LEAN ASSIST",
+      poweredBrand: "AI SUPPORT",
       meta: "\u0646\u0637\u0627\u0642 \u0627\u0644\u062E\u062F\u0645\u0629: \u0645\u0646\u062A\u062C\u0627\u062A\u060C \u062A\u062A\u0628\u0639\u060C \u0625\u0631\u062C\u0627\u0639\u060C \u062A\u0635\u0639\u064A\u062F",
       typing: "\u062C\u0627\u0631\u064A \u0627\u0644\u0643\u062A\u0627\u0628\u0629\u2026",
-      afterIntro: "\u0634\u0643\u0631\u064B\u0627 {name}. \u062D\u0641\u0638\u062A \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0648\u0623\u0646\u0627 \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u0633\u0627\u0639\u062F\u0629. \u0645\u0627 \u0627\u0644\u0630\u064A \u062A\u0631\u064A\u062F \u0627\u0644\u0628\u062F\u0621 \u0628\u0647\u061F"
+      afterIntro: "\u0634\u0643\u0631\u064B\u0627 {name}. \u062D\u0641\u0638\u062A \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0648\u0623\u0646\u0627 \u062C\u0627\u0647\u0632 \u0644\u0644\u0645\u0633\u0627\u0639\u062F\u0629. \u0645\u0627 \u0627\u0644\u0630\u064A \u062A\u0631\u064A\u062F \u0627\u0644\u0628\u062F\u0621 \u0628\u0647\u061F",
+      orderCreatedFollowUp: "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0637\u0644\u0628\u0643 {orderNumber}. \u0623\u0642\u062F\u0631 \u0623\u062A\u0627\u0628\u0639 \u062D\u0627\u0644\u062A\u0647 \u0644\u0643\u060C \u0623\u0634\u0631\u062D \u0648\u0636\u0639 \u0627\u0644\u0634\u062D\u0646\u060C \u0623\u0648 \u0623\u0631\u0627\u062C\u0639 \u0645\u0644\u0641 \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u0641\u0648\u0638 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u062C\u0644\u0633\u0629."
     },
     brand: {
-      title: "Lean Souq",
-      subtitle: "\u062F\u0639\u0645 \u0645\u062A\u062C\u0631 \u0630\u0643\u064A"
+      title: "\u0645\u062A\u062C\u0631 \u0627\u0644\u062F\u0639\u0645",
+      subtitle: "\u0648\u0627\u062C\u0647\u0629 \u062A\u062C\u0627\u0631\u0629 \u0645\u062F\u0639\u0648\u0645\u0629 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064A"
     }
   }
 };
@@ -22793,6 +22797,24 @@ function localizeOrder(order, locale) {
 function buildProductPrompt(product, locale) {
   return locale === "ar" ? `\u0623\u0631\u064A\u062F \u0645\u0639\u0631\u0641\u0629 \u062A\u0641\u0627\u0635\u064A\u0644 ${product.nameAr}` : `Tell me about the ${product.name}`;
 }
+function createChatMessage(role, text) {
+  return {
+    id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    role,
+    text,
+    sentAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function formatMessageTime(sentAt, locale) {
+  if (!sentAt) {
+    return "";
+  }
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date(sentAt));
+}
 function App() {
   const [siteLocale, setSiteLocale] = (0, import_react.useState)("en");
   const [route, setRoute] = (0, import_react.useState)(() => parseRoute(window.location.pathname));
@@ -22825,6 +22847,7 @@ function App() {
   });
   const [loading, setLoading] = (0, import_react.useState)(false);
   const [analytics, setAnalytics] = (0, import_react.useState)(null);
+  const [analyticsSummary, setAnalyticsSummary] = (0, import_react.useState)(null);
   const [showAnalytics, setShowAnalytics] = (0, import_react.useState)(false);
   const inputRef = (0, import_react.useRef)(null);
   const autoOpenedRef = (0, import_react.useRef)(false);
@@ -22873,11 +22896,7 @@ function App() {
       const data = await response.json();
       setBootstrapData(data);
       setMessages([
-        {
-          id: "welcome",
-          role: "bot",
-          text: data.welcome
-        }
+        createChatMessage("bot", data.welcome)
       ]);
     }
     loadBootstrap();
@@ -22943,11 +22962,7 @@ function App() {
       return;
     }
     setLoading(true);
-    const userEntry = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      text: nextMessage
-    };
+    const userEntry = createChatMessage("user", nextMessage);
     setMessages((current) => [...current, userEntry]);
     setDraft("");
     try {
@@ -22972,11 +22987,7 @@ function App() {
       setSessionId(data.sessionId);
       setMessages((current) => [
         ...current,
-        {
-          id: `bot-${Date.now()}`,
-          role: "bot",
-          text: data.reply
-        }
+        createChatMessage("bot", data.reply)
       ]);
     } finally {
       setLoading(false);
@@ -22985,7 +22996,12 @@ function App() {
   async function openAnalytics() {
     const response = await fetch("/api/analytics");
     const data = await response.json();
+    if (!response.ok) {
+      showToast(data.error ?? "Support analytics are unavailable right now.");
+      return;
+    }
     setAnalytics(data.events);
+    setAnalyticsSummary(data.summary ?? null);
     setShowAnalytics(true);
   }
   function openChatWith(prompt = "") {
@@ -23070,12 +23086,21 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok || !data.order?.orderNumber) {
-        throw new Error(data.error || "Failed to create demo order");
+        throw new Error(data.error || "Failed to create order");
       }
       setOrderList((current) => mergeOrdersByNumber([data.order], current));
       setCartItems([]);
       setCartOpen(false);
       setCheckoutNotice(data.order.orderNumber);
+      setMessages((current) => [
+        ...current,
+        createChatMessage(
+          "bot",
+          fillTemplate(content.widget.orderCreatedFollowUp, {
+            orderNumber: data.order.orderNumber
+          })
+        )
+      ]);
       showToast(
         localizeText(
           siteLocale,
@@ -23098,11 +23123,7 @@ function App() {
     setCustomerProfile(nextProfile);
     setWidgetOpen(true);
     setWidgetView("chat");
-    const introMessage = {
-      id: `bot-profile-${Date.now()}`,
-      role: "bot",
-      text: fillTemplate(content.widget.afterIntro, { name: profile.name })
-    };
+    const introMessage = createChatMessage("bot", fillTemplate(content.widget.afterIntro, { name: profile.name }));
     setMessages((current) => [
       ...current,
       introMessage
@@ -23118,11 +23139,10 @@ function App() {
     setSessionId(crypto.randomUUID());
     setMessages(
       bootstrapData ? [
-        {
-          id: "welcome-reset",
-          role: "bot",
-          text: customerProfile.submitted ? fillTemplate(content.widget.afterIntro, { name: customerProfile.name }) : bootstrapData.welcome
-        }
+        createChatMessage(
+          "bot",
+          customerProfile.submitted ? fillTemplate(content.widget.afterIntro, { name: customerProfile.name }) : bootstrapData.welcome
+        )
       ] : []
     );
     setDraft("");
@@ -23321,6 +23341,32 @@ function App() {
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { children: content.sections.analyticsTitle }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", className: "icon-circle", onClick: () => setShowAnalytics(false), children: "\xD7" })
       ] }),
+      analyticsSummary ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "analytics-summary-grid", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: content.sections.analyticsSummaryTitle }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.totalTurns })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(siteLocale, "Contained", "\u062A\u0645 \u0627\u0644\u0627\u062D\u062A\u0648\u0627\u0621") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.containedTurns })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(siteLocale, "Pre-purchase", "\u0642\u0628\u0644 \u0627\u0644\u0634\u0631\u0627\u0621") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.prePurchaseTurns })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(siteLocale, "Post-purchase", "\u0628\u0639\u062F \u0627\u0644\u0634\u0631\u0627\u0621") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.postPurchaseTurns })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(siteLocale, "Account support", "\u062F\u0639\u0645 \u0627\u0644\u062D\u0633\u0627\u0628") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.accountSupportTurns })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "analytics-summary-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(siteLocale, "Human handoff", "\u0627\u0644\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0628\u0634\u0631\u064A") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: analyticsSummary.handoffTurns })
+        ] })
+      ] }) : null,
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", { children: JSON.stringify(analytics ?? [], null, 2) })
     ] }) }) : null
   ] });
@@ -23431,8 +23477,8 @@ function AccountPage({
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: localizeText(locale, "Track every order in one place", "\u062A\u0627\u0628\u0639 \u0643\u0644 \u0637\u0644\u0628\u0627\u062A\u0643 \u0645\u0646 \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: hasProfile ? localizeText(
           locale,
-          "Your saved profile and demo orders are stored locally on this device, so you can return and continue tracking from the same account view.",
-          "\u0646\u062D\u0641\u0638 \u0645\u0644\u0641\u0643 \u0648\u0637\u0644\u0628\u0627\u062A\u0643 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0645\u062D\u0644\u064A\u064B\u0627 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u062D\u062A\u0649 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0631\u062C\u0648\u0639 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0645\u0646 \u0646\u0641\u0633 \u0627\u0644\u0635\u0641\u062D\u0629."
+          "Your saved profile and recent orders are stored locally on this device, so you can return and continue from the same account view.",
+          "\u0646\u062D\u0641\u0638 \u0645\u0644\u0641\u0643 \u0648\u0637\u0644\u0628\u0627\u062A\u0643 \u0627\u0644\u0623\u062E\u064A\u0631\u0629 \u0645\u062D\u0644\u064A\u064B\u0627 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u062D\u062A\u0649 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0631\u062C\u0648\u0639 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0645\u0646 \u0646\u0641\u0633 \u0627\u0644\u0635\u0641\u062D\u0629."
         ) : localizeText(
           locale,
           "Complete your support profile once in chat, then your future orders will appear here automatically.",
@@ -23443,7 +23489,7 @@ function AccountPage({
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "secondary-cta", type: "button", onClick: () => onOpenChat(), children: localizeText(locale, "Open support", "\u0641\u062A\u062D \u0627\u0644\u062F\u0639\u0645") })
         ] }),
         checkoutNotice ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-notice", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Latest demo order", "\u0622\u062E\u0631 \u0637\u0644\u0628 \u062A\u062C\u0631\u064A\u0628\u064A") }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Latest order", "\u0622\u062E\u0631 \u0637\u0644\u0628") }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: checkoutNotice })
         ] }) : null
       ] }),
@@ -23472,23 +23518,23 @@ function AccountPage({
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "section-frame account-orders-frame", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "section-title-row", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { children: localizeText(locale, "My orders", "\u0637\u0644\u0628\u0627\u062A\u064A") }) }),
       !hasProfile && orders.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-inline-note", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Local demo orders saved", "\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0627\u0644\u0645\u062D\u0644\u064A\u0629") }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Saved local orders", "\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: localizeText(
           locale,
-          "These demo orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
-          "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632. \u064A\u0645\u0643\u0646\u0643 \u0625\u0636\u0627\u0641\u0629 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0644\u0627\u062D\u0642\u064B\u0627 \u0644\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062E\u0635\u064A \u0623\u064A\u0636\u064B\u0627."
+          "These local orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
+          "\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0647 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632. \u064A\u0645\u0643\u0646\u0643 \u0625\u0636\u0627\u0641\u0629 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0644\u0627\u062D\u0642\u064B\u0627 \u0644\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u0645\u0644\u0641\u0643 \u0627\u0644\u0634\u062E\u0635\u064A \u0623\u064A\u0636\u064B\u0627."
         ) })
       ] }) : null,
       orders.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-empty-state", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: hasProfile ? localizeText(locale, "No orders yet", "\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0628\u0639\u062F") : localizeText(locale, "Add your details once to unlock order tracking", "\u0623\u0636\u0641 \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0644\u062A\u0641\u0639\u064A\u0644 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0637\u0644\u0628\u0627\u062A") }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: hasProfile ? localizeText(
           locale,
-          "Create a demo order from the cart and it will appear here with a realistic status history.",
-          "\u0623\u0646\u0634\u0626 \u0637\u0644\u0628\u064B\u0627 \u062A\u062C\u0631\u064A\u0628\u064A\u064B\u0627 \u0645\u0646 \u0627\u0644\u0633\u0644\u0629 \u0648\u0633\u064A\u0638\u0647\u0631 \u0647\u0646\u0627 \u0628\u062D\u0627\u0644\u0629 \u0637\u0644\u0628 \u0648\u0627\u0642\u0639\u064A\u0629."
+          "Create an order from the cart and it will appear here with its latest status.",
+          "\u0623\u0646\u0634\u0626 \u0637\u0644\u0628\u064B\u0627 \u0645\u0646 \u0627\u0644\u0633\u0644\u0629 \u0648\u0633\u064A\u0638\u0647\u0631 \u0647\u0646\u0627 \u0645\u0639 \u0623\u062D\u062F\u062B \u062D\u0627\u0644\u0629 \u0644\u0647."
         ) : localizeText(
           locale,
-          "Open the support widget, introduce yourself, and any future demo order will be attached to your saved account.",
-          "\u0627\u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062F\u0639\u0645 \u0648\u0639\u0631\u0651\u0641 \u0628\u0646\u0641\u0633\u0643\u060C \u0648\u0628\u0639\u062F\u0647\u0627 \u0633\u064A\u062A\u0645 \u0631\u0628\u0637 \u0623\u064A \u0637\u0644\u0628 \u062A\u062C\u0631\u064A\u0628\u064A \u062C\u062F\u064A\u062F \u0628\u062D\u0633\u0627\u0628\u0643 \u0627\u0644\u0645\u062D\u0641\u0648\u0638."
+          "Open the support widget, introduce yourself, and future orders will be attached to your saved account.",
+          "\u0627\u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062F\u0639\u0645 \u0648\u0639\u0631\u0651\u0641 \u0628\u0646\u0641\u0633\u0643\u060C \u0648\u0628\u0639\u062F\u0647\u0627 \u0633\u064A\u062A\u0645 \u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0642\u0627\u062F\u0645\u0629 \u0628\u062D\u0633\u0627\u0628\u0643 \u0627\u0644\u0645\u062D\u0641\u0648\u0638."
         ) })
       ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "order-grid", children: orders.map((order) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "order-card", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "order-card-head", children: [
@@ -23533,8 +23579,8 @@ function OrderDetailsPage({ content, locale, onBackToOrders, onBackToStore, onOp
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Order not found", "\u0627\u0644\u0637\u0644\u0628 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F") }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: localizeText(
         locale,
-        `We couldn't find ${orderNumber} in the saved demo orders on this device.`,
-        `\u0644\u0645 \u0646\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 ${orderNumber} \u0636\u0645\u0646 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.`
+        `We couldn't find ${orderNumber} in the saved orders on this device.`,
+        `\u0644\u0645 \u0646\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 ${orderNumber} \u0636\u0645\u0646 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632.`
       ) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "account-hero-actions", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "primary-cta", type: "button", onClick: onBackToOrders, children: localizeText(locale, "Back to orders", "\u0627\u0644\u0639\u0648\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u0637\u0644\u0628\u0627\u062A") }),
@@ -23730,7 +23776,7 @@ function CartDrawer({
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "cart-summary-note", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: locale === "ar" ? "\u062C\u0627\u0647\u0632 \u0644\u0644\u062F\u0639\u0645" : "Support ready" }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: locale === "ar" ? "\u0628\u0639\u062F \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 \u0623\u0648 \u0627\u0644\u0625\u0631\u062C\u0627\u0639 \u0645\u0628\u0627\u0634\u0631\u0629 \u0645\u0646 \u0627\u0644\u0634\u0627\u062A." : "After creating the demo order, the customer can immediately track the order or ask for a return in chat." })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: locale === "ar" ? "\u0628\u0639\u062F \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A\u060C \u064A\u0645\u0643\u0646 \u0645\u062A\u0627\u0628\u0639\u0629 \u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0644\u0628 \u0623\u0648 \u0627\u0644\u0625\u0631\u062C\u0627\u0639 \u0645\u0628\u0627\u0634\u0631\u0629 \u0645\u0646 \u0627\u0644\u0634\u0627\u062A." : "After creating the order, the customer can immediately track it or ask for a return in chat." })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "cart-footer", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "ghost-link cart-clear", type: "button", onClick: onClear, children: content.sections.clearCart }),
@@ -23986,8 +24032,11 @@ function SupportWidget({
             ] }) : null
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-brand", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "wave", children: "\u{1F44B}" }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: view === "home" ? text.homeTitle : text.chatTitle })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-brand-avatar", children: "LA" }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-brand-copy", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: view === "home" ? text.homeTitle : text.chatTitle }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Usually replies instantly", "\u064A\u0631\u062F \u063A\u0627\u0644\u0628\u0627\u064B \u0628\u0634\u0643\u0644 \u0641\u0648\u0631\u064A") })
+            ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-header-end", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "widget-icon widget-close", type: "button", onClick: onClose, "aria-label": "Close", children: "\xD7" }) })
         ] }),
@@ -24059,8 +24108,24 @@ function SupportWidget({
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-chat-scroll", ref: messageListRef, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: (text.quickActions ?? prompts).slice(0, 5).map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => onSend(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
-              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-bubble ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }) }, message.id)),
-              loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-bubble bot", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.typing }) }) : null
+              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: `message-row ${message.role}`, children: [
+                message.role === "bot" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-avatar", children: "LA" }) : null,
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role}`, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-meta", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: formatMessageTime(message.sentAt, locale) }),
+                    message.role === "user" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-status", children: "\u2713\u2713" }) : null
+                  ] })
+                ] })
+              ] }, message.id)),
+              loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "message-row bot typing-row", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-avatar", children: "LA" }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-bubble bot typing-bubble", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "typing-dots", "aria-label": text.typing, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {})
+                ] }) })
+              ] }) : null
             ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
@@ -24086,7 +24151,15 @@ function SupportWidget({
                   },
                   emoji
                 )) }) : null,
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "send-button", type: "submit", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SendIcon, {}) }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "button",
+                  {
+                    className: `send-button ${draft.trim() ? "ready" : ""}`,
+                    type: "submit",
+                    "aria-label": localizeText(locale, "Send message", "\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629"),
+                    children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SendIcon, {})
+                  }
+                ),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                   "input",
                   {

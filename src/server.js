@@ -8,6 +8,7 @@ import fs from "node:fs/promises";
 import { createReadStream, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createChatbot } from "./lib/chatbot.js";
+import { createCommerceProviderFromEnv } from "./lib/commerceProvider.js";
 import { integrationMap } from "./integrations/index.js";
 import { createOrder, listOrders } from "./data/orders.js";
 import { products } from "./data/products.js";
@@ -15,9 +16,14 @@ import { products } from "./data/products.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.join(__dirname, "..", "public");
-const chatbot = createChatbot();
+const chatbot = createChatbot({
+  commerceProvider: createCommerceProviderFromEnv()
+});
 const port = process.env.PORT || 3000;
 const host = process.env.HOST || "127.0.0.1";
+const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
+const allowRequestScopedOpenAIKey = process.env.ALLOW_CLIENT_OPENAI_KEY_OVERRIDE === "true";
+const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -36,7 +42,14 @@ function sendJson(response, statusCode, payload) {
 function readRequestBody(request) {
   return new Promise((resolve, reject) => {
     let body = "";
+    let bodyLength = 0;
     request.on("data", (chunk) => {
+      bodyLength += chunk.length;
+      if (bodyLength > maxRequestBodyBytes) {
+        reject(new Error("Request body too large"));
+        request.destroy();
+        return;
+      }
       body += chunk.toString();
     });
     request.on("end", () => resolve(body));
@@ -80,22 +93,24 @@ const server = http.createServer(async (request, response) => {
         locale,
         samplePrompts: [
           "Tell me about the Wireless Mouse",
-          "Show me products",
+          "What can you help me with?",
           "How do returns work?",
           "Recommend the best product for travel",
           "What payment methods do you support?",
           "What data do you collect?",
           "What are your terms and conditions?",
+          "Where is my latest order?",
           "I need a human agent"
         ],
         samplePromptsAr: [
           "أريد معرفة تفاصيل ماوس لاسلكي",
-          "اعرض المنتجات",
+          "بماذا تستطيع مساعدتي؟",
           "كيف تعمل سياسة الاسترجاع؟",
           "رشح لي أفضل منتج للسفر",
           "ما طرق الدفع المتاحة؟",
           "ما البيانات التي تجمعونها؟",
           "ما هي الشروط والأحكام؟",
+          "أين آخر طلب لي؟",
           "أحتاج موظف خدمة عملاء"
         ],
         integrations: integrationMap
@@ -109,12 +124,29 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (request.method === "GET" && requestUrl.pathname === "/api/orders") {
+      if (!debugApiRoutesEnabled) {
+        sendJson(response, 403, {
+          error: "Debug order access is disabled in secure mode."
+        });
+        return;
+      }
+
       sendJson(response, 200, { orders: listOrders() });
       return;
     }
 
     if (request.method === "GET" && requestUrl.pathname === "/api/analytics") {
-      sendJson(response, 200, { events: chatbot.getAnalytics() });
+      if (!debugApiRoutesEnabled) {
+        sendJson(response, 403, {
+          error: "Support analytics are disabled in secure mode."
+        });
+        return;
+      }
+
+      sendJson(response, 200, {
+        events: chatbot.getAnalytics(),
+        summary: chatbot.getAnalyticsSummary()
+      });
       return;
     }
 
@@ -127,7 +159,8 @@ const server = http.createServer(async (request, response) => {
         message: parsed.message ?? "",
         preferredLocale: parsed.preferredLocale === "ar" ? "ar" : "en",
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined
+        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
+        openaiApiKey: allowRequestScopedOpenAIKey ? request.headers["x-openai-key"] : null
       });
 
       sendJson(response, 200, {
@@ -148,8 +181,7 @@ const server = http.createServer(async (request, response) => {
       });
 
       sendJson(response, 201, {
-        order,
-        orders: listOrders()
+        order
       });
       return;
     }
@@ -157,8 +189,12 @@ const server = http.createServer(async (request, response) => {
     await serveStatic({ ...request, url: requestUrl.pathname }, response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown server error";
-    sendJson(response, 500, {
-      error: message
+    const statusCode = message === "Request body too large" ? 413 : 500;
+    sendJson(response, statusCode, {
+      error:
+        statusCode === 413
+          ? "Request body too large."
+          : "Internal server error."
     });
   }
 });

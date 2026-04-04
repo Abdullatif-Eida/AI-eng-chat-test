@@ -1,11 +1,11 @@
 
-// the business-logic file that gives the chatbot real store knowledge, like finding products, checking orders, applying return rules, 
-// answering policy questions, and deciding when to hand off to a human.
+// Shared commerce helpers used by the AI tool layer. These stay deterministic for
+// data access and policy enforcement, but avoid acting like the chatbot brain.
 
+import { createHash } from "node:crypto";
 import { products } from "../data/products.js";
 import { orders } from "../data/orders.js";
 import { storePolicies } from "../data/policies.js";
-import { returnsPolicy } from "../data/returnsPolicy.js";
 
 const paymentMethods = {
   en: ["mada", "Visa", "Mastercard", "Apple Pay", "Cash on Delivery"],
@@ -157,6 +157,23 @@ export function findProduct(query = "") {
   return matches[0]?.product ?? null;
 }
 
+function getRankedProducts(query = "") {
+  const needle = normalizeQuery(query);
+
+  const ranked = products
+    .map((product) => ({
+      product,
+      score: scoreProductMatch(product, query)
+    }))
+    .sort((left, right) => right.score - left.score || right.product.rating - left.product.rating);
+
+  if (!needle) {
+    return ranked;
+  }
+
+  return ranked.filter((entry) => entry.score > 0);
+}
+
 export function listProductsByCategory(category = "") {
   const needle = normalizeQuery(category);
   const tokens = tokenizeQuery(category);
@@ -199,69 +216,15 @@ export function getCatalogSummary(locale = "en") {
     .join("\n");
 
   return locale === "ar"
-    ? `هذه أبرز الفئات المتوفرة لدينا:\n${categoryLines}\n\nاذكر الفئة أو الاستخدام مثل السفر أو المنزل أو الصوتيات وسأرشح لك الأنسب.`
-    : `Here are the main categories we currently carry:\n${categoryLines}\n\nTell me the category or use case, like travel, home, or audio, and I’ll narrow the best options for you.`;
+    ? `هذه أبرز الفئات المتوفرة لدينا:\n${categoryLines}\n\nاذكر المنتج أو الفئة أو ما تحتاجه وسأبحث لك في الكتالوج.`
+    : `Here are the main categories we currently carry:\n${categoryLines}\n\nTell me the product, category, or what you need, and I’ll search the catalog for the best fits.`;
 }
 
 export function recommendProducts(query = "", locale = "en") {
-  const normalized = query.toLowerCase();
+  const ranked = getRankedProducts(query);
 
-  if (
-    normalized.includes("watch") ||
-    normalized.includes("sport") ||
-    normalized.includes("ساعة") ||
-    normalized.includes("رياض") ||
-    normalized.includes("fitness")
-  ) {
-    return products.filter((product) => product.category === "Wearables").slice(0, 3);
-  }
-
-  if (
-    normalized.includes("audio") ||
-    normalized.includes("music") ||
-    normalized.includes("earbud") ||
-    normalized.includes("سما") ||
-    normalized.includes("صوت")
-  ) {
-    return products.filter((product) => ["Audio", "Gaming"].includes(product.category)).slice(0, 3);
-  }
-
-  if (
-    normalized.includes("office") ||
-    normalized.includes("work") ||
-    normalized.includes("mouse") ||
-    normalized.includes("مكتب") ||
-    normalized.includes("عمل")
-  ) {
-    return products.filter((product) => ["Electronics", "Accessories"].includes(product.category)).slice(0, 4);
-  }
-
-  if (
-    normalized.includes("travel") ||
-    normalized.includes("portable") ||
-    normalized.includes("battery") ||
-    normalized.includes("power") ||
-    normalized.includes("سفر") ||
-    normalized.includes("بطاري") ||
-    normalized.includes("باور")
-  ) {
-    const prioritySlugs = new Set([
-      "portable-power-bank",
-      "noise-cancelling-earbuds",
-      "external-ssd",
-      "wireless-charger"
-    ]);
-    return products.filter((product) => prioritySlugs.has(product.slug));
-  }
-
-  if (
-    normalized.includes("home") ||
-    normalized.includes("security") ||
-    normalized.includes("camera") ||
-    normalized.includes("منزل") ||
-    normalized.includes("كاميرا")
-  ) {
-    return products.filter((product) => product.category === "Smart Home").slice(0, 3);
+  if (ranked.length > 0) {
+    return ranked.slice(0, 4).map((entry) => entry.product);
   }
 
   const sorted = [...products].sort((left, right) => right.rating - left.rating || left.priceSar - right.priceSar);
@@ -269,61 +232,17 @@ export function recommendProducts(query = "", locale = "en") {
 }
 
 export function getRecommendationRationale(query = "", locale = "en") {
-  const normalized = query.toLowerCase();
+  const tokens = tokenizeQuery(query);
 
-  if (
-    normalized.includes("travel") ||
-    normalized.includes("portable") ||
-    normalized.includes("battery") ||
-    normalized.includes("power") ||
-    normalized.includes("سفر") ||
-    normalized.includes("بطاري") ||
-    normalized.includes("باور")
-  ) {
+  if (tokens.length > 0) {
     return locale === "ar"
-      ? "اخترت هذه المنتجات لأنها خفيفة وسهلة الحمل ومفيدة أثناء التنقل والسفر."
-      : "I picked these because they are portable, practical on the move, and strong travel companions.";
-  }
-
-  if (
-    normalized.includes("watch") ||
-    normalized.includes("sport") ||
-    normalized.includes("ساعة") ||
-    normalized.includes("رياض") ||
-    normalized.includes("fitness")
-  ) {
-    return locale === "ar"
-      ? "اخترت هذه الخيارات لأنها مناسبة للنشاط اليومي والرياضة وتتبع الاستخدام بسهولة."
-      : "I picked these because they are well suited to daily activity, fitness tracking, and wearable convenience.";
-  }
-
-  if (
-    normalized.includes("audio") ||
-    normalized.includes("music") ||
-    normalized.includes("earbud") ||
-    normalized.includes("سما") ||
-    normalized.includes("صوت")
-  ) {
-    return locale === "ar"
-      ? "اخترت هذه الخيارات لأنها تركز على جودة الصوت والراحة وسهولة الاستخدام اليومي."
-      : "I picked these because they focus on sound quality, comfort, and everyday listening.";
-  }
-
-  if (
-    normalized.includes("home") ||
-    normalized.includes("security") ||
-    normalized.includes("camera") ||
-    normalized.includes("منزل") ||
-    normalized.includes("كاميرا")
-  ) {
-    return locale === "ar"
-      ? "اخترت هذه المنتجات لأنها مناسبة للمنزل الذكي والمراقبة والراحة اليومية."
-      : "I picked these because they are strong fits for smart-home use, security, and daily convenience.";
+      ? "اخترت هذه الخيارات بناءً على أقرب تطابق مع ما طلبته، مع مراعاة التقييمات والجودة العامة."
+      : "I picked these options based on the closest catalog match to your request, while also favoring stronger ratings and overall quality.";
   }
 
   return locale === "ar"
-    ? "اخترت هذه الخيارات بناءً على أفضل التقييمات والتوازن بين السعر والفائدة."
-    : "I picked these based on strong ratings and the best balance between value and usefulness.";
+    ? "اخترت هذه الخيارات بناءً على أفضل التقييمات والتوازن بين السعر والقيمة."
+    : "I picked these options based on strong ratings and a balanced mix of value and quality.";
 }
 
 export function findOrder(orderNumber = "") {
@@ -350,13 +269,13 @@ export function isOrderEligibleForReturn(order, locale = "en") {
   const now = new Date("2026-03-15");
   const diffDays = Math.floor((now - deliveredAt) / (1000 * 60 * 60 * 24));
 
-  if (diffDays > returnsPolicy.standardWindowDays) {
+  if (diffDays > storePolicies.returns.windowDays) {
     return {
       eligible: false,
       reason:
         locale === "ar"
-          ? `تم تسليم هذا الطلب قبل ${diffDays} أيام، وهذا خارج نافذة الإرجاع البالغة ${returnsPolicy.standardWindowDays} أيام.`
-          : `This order was delivered ${diffDays} days ago, which is outside the ${returnsPolicy.standardWindowDays}-day return window.`
+          ? `تم تسليم هذا الطلب قبل ${diffDays} أيام، وهذا خارج نافذة الإرجاع البالغة ${storePolicies.returns.windowDays} أيام.`
+          : `This order was delivered ${diffDays} days ago, which is outside the ${storePolicies.returns.windowDays}-day return window.`
     };
   }
 
@@ -384,8 +303,8 @@ export function isOrderEligibleForReturn(order, locale = "en") {
     eligible: true,
     reason:
       locale === "ar"
-        ? `يبدو أن الطلب مؤهل للإرجاع خلال ${returnsPolicy.standardWindowDays} أيام من التسليم، بشرط أن يكون المنتج غير مستخدم ومع التغليف والملصقات الأصلية. رسوم الشحن العكسي على العميل ما لم يكن السبب خطأ من الشركة.`
-        : `This order appears eligible for a return request within ${returnsPolicy.standardWindowDays} days of delivery, as long as the item is unused and returned with its original tags and packaging. Return shipping is paid by the customer unless the return is due to company error.`
+        ? `يبدو أن الطلب مؤهل للإرجاع خلال ${storePolicies.returns.windowDays} أيام من التسليم، بشرط أن يكون المنتج غير مستخدم ومع التغليف والملصقات الأصلية. رسوم الشحن العكسي على العميل ما لم يكن السبب خطأ من الشركة.`
+        : `This order appears eligible for a return request within ${storePolicies.returns.windowDays} days of delivery, as long as the item is unused and returned with its original tags and packaging. Return shipping is paid by the customer unless the return is due to company error.`
   };
 }
 
@@ -407,12 +326,24 @@ export function canCancelOrder(order) {
 }
 
 export function createHandoffTicket({ customerMessage, intent, locale, sessionId, customer }) {
+  const customerFingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        sessionId,
+        intent,
+        email: customer?.email ?? null,
+        name: customer?.name ?? null
+      })
+    )
+    .digest("hex")
+    .slice(0, 8);
+
   return {
-    id: `handoff-${sessionId.slice(0, 8)}`,
+    id: `handoff-${customerFingerprint}`,
     queue: "customer-support-tier-1",
     priority: ["returns_refunds", "order_change_cancel"].includes(intent) ? "high" : "normal",
     locale,
-    summary: customerMessage,
+    summary: String(customerMessage ?? "").trim().slice(0, 240),
     intent,
     customerName: customer?.name ?? null,
     customerEmail: customer?.email ?? null
@@ -477,8 +408,8 @@ export function getPolicyAnswer(message = "", locale = "en") {
     if (asksTermsLaw) {
       parts.push(
         locale === "ar"
-          ? `كما تنص الشروط على أن المنتجات تُباع كما هي دون ضمانات إضافية، وأن محتوى الموقع مملوك لـ Lean Market، وتخضع هذه الشروط لقوانين ${storePolicies.contact.governingLaw.ar}.`
-          : `The terms also state that products are provided as-is without additional warranties, website content belongs to Lean Market, and the terms are governed by the laws of the ${storePolicies.contact.governingLaw.en}.`
+          ? `كما تنص الشروط على أن المنتجات تُباع كما هي دون ضمانات إضافية، وأن محتوى الموقع مملوك للتاجر، وتخضع هذه الشروط لقوانين ${storePolicies.contact.governingLaw.ar}.`
+          : `The terms also state that products are provided as-is without additional warranties, website content belongs to the merchant, and the terms are governed by the laws of the ${storePolicies.contact.governingLaw.en}.`
       );
     }
     return parts.join(locale === "ar" ? " " : " ");

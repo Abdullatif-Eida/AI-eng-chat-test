@@ -1,37 +1,179 @@
-Solution Design 
-Goal 
-This POC proves that a focused AI-first support layer can reduce response time for routine 
-e-commerce inquiries without trying to replace the support team. I prioritized the smallest 
-MVP that directly addresses the brief: 
-• product information to support conversion and reduce cart abandonment 
-• order tracking to deflect repetitive tickets 
-• returns/refunds to protect trust after purchase 
-• human handoff to safely handle unclear or sensitive cases 
-Architecture 
-The prototype is a React storefront with an embedded support widget. The chatbot sits on 
-top of grounded business services rather than answering free-form generation alone. This 
-keeps product, order, and policy answers trustworthy and makes the shape easy to 
-integrate later with real commerce and CRM systems. 
- 
-Core user flow 
-The assistant first detects intent, then follows a grounded path. If key information is 
-missing, it asks a clarifying question. If confidence is low, the issue is sensitive, or the order 
-cannot be resolved safely; it escalates to a human agent. 
+Solution Design
+Goal
+This POC develops a generic e-commerce chatbot that behaves like a careful human
+support agent for routine journeys, not a rules-only FAQ bot. The target experience is an
+AI-imitated human touch: the assistant greets naturally, asks clarifying questions, checks
+trusted business systems, and responds with grounded answers for product information,
+order tracking, returns/refunds, and post-creation follow-up on customer profiles and order
+details.
 
+The POC is still intentionally narrow. It does not try to replace the support team. It proves
+that an AI-first support layer can reduce response time for repetitive requests while
+protecting trust through grounded data access and human escalation.
 
- 
-Key design choices 
-• Grounded answers first: product, order, and refund answers come from 
-structured data, not unsupported generation. 
-• Human handoff in MVP: support systems should not guess on exceptions, 
-complaints, or low-confidence cases. 
-• Bilingual-ready: Arabic and English support matters for KSA operations. 
-• Analytics included: the business needs to measure containment, handoff rate, and 
-response-time improvement. 
-Technology stack 
-• frontend: React 
-• backend: Node.js native HTTP server 
-• data layer: shared mock catalog, order, and policy services 
-• testing: Node built-in test runner 
-• optional AI layer: OpenAI Responses API for grounded reply composition when 
-credentials are available 
+Operating principle
+The assistant should feel warm, responsive, and human-like in tone, but it should not
+deceptively claim to be a human. The right design is transparent AI-assisted support with
+human-style service quality: natural conversation, grounded answers, careful clarification,
+and fast escalation when risk or uncertainty appears.
+
+Business fit
+The design directly addresses the problem definition:
+• pre-purchase support: product and delivery questions are answered quickly to reduce
+cart abandonment
+• post-purchase support: order status, returns, and refund guidance are available
+instantly after order creation
+• operational efficiency: repetitive support work is handled automatically so human
+agents can focus on exceptions and sensitive cases
+• trust and scale: the assistant uses verified data, bilingual support, and safe handoff
+rather than unsupported free-form generation
+
+Architecture
+The prototype is a React storefront with an embedded support widget and a Node.js
+backend orchestrator. The backend sits between the language model and trusted business
+services so the assistant can act like a human support agent without inventing facts.
+
+The model should never query databases directly. It interacts only through controlled
+backend tools that enforce authentication, authorization, redaction, rate limits, and audit
+logging before any customer or order data is returned.
+
+Core services:
+• catalog service for product, stock, and delivery information
+• customer profile service for authenticated profile lookup after account creation
+• order service for order details, shipment state, and payment status after order creation
+• policy service for returns, refunds, exchanges, and delivery rules
+• handoff service for escalation to a human agent when confidence or risk requires it
+• analytics service for intent mix, containment, handoff rate, and response outcomes
+
+AI interaction model
+This should not rely on regular expressions alone. Intent routing can start with lightweight
+classification, but the primary experience comes from an LLM-driven orchestrator that can:
+• understand natural Arabic and English phrasing
+• ask follow-up questions when the request is incomplete
+• call the right business service based on the user need
+• compose a grounded response in a polite, human-like tone
+• decline or escalate when the system cannot answer safely
+
+This makes the chatbot feel closer to a human agent while still keeping answers anchored
+to trusted data sources.
+
+Capability boundary
+For this POC, the assistant should be read-only for sensitive commerce operations. It can
+inspect customer profiles, inspect order details, explain policy outcomes, and prepare a
+human handoff summary, but high-risk mutations such as refunds, address changes,
+payment changes, account recovery, and manual compensation should remain with secure
+business workflows or human agents. This protects trust and keeps the MVP realistic.
+
+Core user flow
+1. The assistant detects language, intent, and whether the request is pre-purchase or
+post-purchase.
+2. If the request involves profile or order data, the assistant verifies the user session or
+asks for the minimum information needed to continue safely.
+3. The backend retrieves customer profile, order details, and policy data from trusted
+services.
+4. The LLM composes a concise, empathetic answer based only on the returned data and
+approved policies.
+5. If information is missing, conflicting, low-confidence, or sensitive, the assistant explains
+the limitation and hands the conversation to a human agent.
+
+Human-like agent behavior
+To imitate a strong support agent rather than a form validator, the assistant should:
+• acknowledge the customer goal in natural language before answering
+• ask one clear clarifying question when information is missing instead of forcing rigid input
+formats
+• summarize what it found in the user profile or order record in simple language
+• confirm next steps, such as refund review, delivery timing, or agent handoff
+• avoid pretending that an action was completed when the system only inspected data
+
+Key design choices
+• grounded answers first: product, order, profile, and refund answers come from
+structured services, not unsupported generation
+• human handoff in MVP: low-confidence, complaint-heavy, payment-related, and
+exception-heavy cases should move to a real agent
+• bilingual-ready: Arabic and English support is required for KSA operations
+• analytics included: the business needs measurable evidence that response times and
+containment improve
+• generic integration model: mock services should mirror real commerce, identity, and CRM
+interfaces so the design can move beyond the POC
+• transparent automation: the assistant should present itself as an AI support assistant with
+human-like service quality, not falsely claim to be a live agent
+
+Identity and authorization model
+Sensitive post-creation checks need a stricter access pattern:
+• signed-in users: server-side session verification should bind every profile and order lookup
+to the authenticated customer identity
+• guest orders: lookup should require a safe verification path such as order number plus a
+second factor already owned by the customer, not just easy-to-guess fields
+• tool-level authorization: each backend tool call should re-check whether the requested
+resource belongs to the authenticated or verified customer
+• no raw model trust: the model may request a lookup, but the backend must be the final
+enforcement point for access control
+
+Security, privacy, and abuse edge cases
+The revised solution must explicitly handle sensitive cases:
+• authenticated access: profile and order details should only be shown after verifying the
+user session or approved lookup method
+• least-privilege tool access: the model should only call the services needed for the current
+request
+• server-side authorization on every call: even if a conversation context says which order is
+active, the backend must re-check access before returning data
+• prompt-injection resistance: user instructions must never override system safety rules or
+cause hidden policy data to be exposed
+• data minimization: only the fields needed for the response should be retrieved and shown
+• log redaction: payment details, addresses, phone numbers, and personal identifiers
+should be masked in logs and analytics
+• rate limiting and abuse controls: repeated profile and order lookups should be monitored to
+reduce scraping and account probing risks
+• tenant and session isolation: no user should ever see data from another account because
+of shared conversation state, cache keys, or tool context
+• secrets protection: API keys, internal notes, fraud flags, and hidden policy rules must never
+be exposed in prompts or user-visible responses
+
+Memory, retention, and cache edge cases
+The design should also avoid hidden operational problems:
+• session memory only: conversational memory should be limited to the active support
+session unless the business has a clear retention policy
+• no silent long-term memory of sensitive chats: profile and order conversations should not
+be retained indefinitely by default
+• defined retention windows: transcripts, tool traces, and analytics events should have a
+documented retention period and deletion path
+• no training-by-default on customer conversations: retained chats should not be reused for
+model improvement unless the business has explicit approval and a compliant policy
+• safe caching: public catalog and policy content may be cached, but personal profile and
+order data should not be stored in a shared cache
+• cache invalidation: order and refund status caches must expire quickly or be invalidated
+after updates so the assistant does not present stale status
+• handoff continuity without over-retention: only the minimum conversation summary needed
+for the human agent should be passed forward
+• logout and session-end scrubbing: temporary session memory and tool context should be
+cleared when the support session ends or the user identity changes
+
+Failure and exception cases
+The assistant should hand off or ask for clarification when:
+• the user is not authenticated but requests profile or order details
+• multiple orders match the provided information
+• the order is canceled, partially refunded, split-shipped, or otherwise inconsistent
+• the user requests an account or order change that exceeds read-only POC permissions
+• a policy answer depends on merchant review or manual approval
+• the user expresses fraud, chargeback, legal, or high-frustration concerns
+• the model cannot confidently ground the answer in retrieved data
+
+Technology stack
+• frontend: React
+• backend: Node.js native HTTP server
+• orchestration: tool-calling support workflow with OpenAI Responses API when credentials
+are available
+• data layer: mock catalog, customer profile, order, and policy services designed to map to
+real integrations later
+• observability: structured analytics, redacted logs, and confidence-based escalation events
+• testing: Node built-in test runner covering normal flows, security rules, stale-cache cases,
+and escalation paths
+
+Success criteria for the POC
+The solution is successful if it shows that:
+• customers receive fast and trustworthy answers on the three target journeys
+• the assistant can check profile and order details safely after creation
+• the conversation feels human and helpful without relying on unsupported claims
+• risky or ambiguous cases are escalated instead of guessed
+• secure access controls prevent cross-user data exposure during profile and order lookups
+• the system handles security, memory, retention, and cache edge cases responsibly

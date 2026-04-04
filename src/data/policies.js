@@ -19,10 +19,10 @@ export const storePolicies = {
       en: [
         "Customers must be at least 18 years old or have legal consent to use the site.",
         "Users must provide accurate account and purchase information and must not misuse the website.",
-        "Product descriptions and prices can change, and Lean Market may correct pricing errors.",
+        "Product descriptions and prices can change, and the merchant may correct pricing errors.",
         "Payments are processed securely via Amazon Payment Services, and all related fees and taxes remain payable.",
         "Delivery times are estimated, not guaranteed, and risk of loss passes to the customer upon delivery.",
-        "Website content such as logos, text, and images belongs to Lean Market.",
+        "Website content such as logos, text, and images belongs to the merchant.",
         "Products are provided as-is, and the site limits liability for indirect or consequential damages.",
         "The terms are governed by the laws of the Kingdom of Saudi Arabia and may be updated at any time."
       ],
@@ -32,7 +32,7 @@ export const storePolicies = {
         "قد تتغير أوصاف المنتجات والأسعار، ويحق للمتجر تصحيح أخطاء التسعير.",
         "تتم معالجة المدفوعات بأمان عبر Amazon Payment Services، ويظل العميل مسؤولاً عن الرسوم والضرائب المرتبطة بالشراء.",
         "أوقات التوصيل تقديرية وليست مضمونة، وتنتقل مسؤولية فقدان الشحنة إلى العميل عند التسليم.",
-        "محتوى الموقع مثل الشعارات والنصوص والصور مملوك لـ Lean Market.",
+        "محتوى الموقع مثل الشعارات والنصوص والصور مملوك للتاجر.",
         "المنتجات تُباع كما هي، مع تحديد مسؤولية المتجر عن الأضرار غير المباشرة أو التبعية.",
         "تخضع الشروط لقوانين المملكة العربية السعودية، وقد يتم تحديثها في أي وقت."
       ]

@@ -1,9 +1,15 @@
 import { createChatbot } from "../../src/lib/chatbot.js";
+import { createCommerceProviderFromEnv } from "../../src/lib/commerceProvider.js";
 import { integrationMap } from "../../src/integrations/index.js";
 import { createOrder, listOrders } from "../../src/data/orders.js";
 import { products } from "../../src/data/products.js";
 
-const chatbot = createChatbot();
+const chatbot = createChatbot({
+  commerceProvider: createCommerceProviderFromEnv()
+});
+const debugApiRoutesEnabled = process.env.ENABLE_DEBUG_API_ROUTES === "true";
+const allowRequestScopedOpenAIKey = process.env.ALLOW_CLIENT_OPENAI_KEY_OVERRIDE === "true";
+const maxRequestBodyBytes = Number(process.env.MAX_REQUEST_BODY_BYTES || 64 * 1024);
 
 function json(statusCode, payload) {
   return {
@@ -26,6 +32,10 @@ function normalizeLocale(locale) {
 function parseBody(body) {
   if (!body) {
     return {};
+  }
+
+  if (body.length > maxRequestBodyBytes) {
+    throw new Error("Request body too large");
   }
 
   try {
@@ -64,22 +74,24 @@ export async function handler(event) {
         locale,
         samplePrompts: [
           "Tell me about the Wireless Mouse",
-          "Show me products",
+          "What can you help me with?",
           "How do returns work?",
           "Recommend the best product for travel",
           "What payment methods do you support?",
           "What data do you collect?",
           "What are your terms and conditions?",
+          "Where is my latest order?",
           "I need a human agent"
         ],
         samplePromptsAr: [
           "أريد معرفة تفاصيل ماوس لاسلكي",
-          "اعرض المنتجات",
+          "بماذا تستطيع مساعدتي؟",
           "كيف تعمل سياسة الاسترجاع؟",
           "رشح لي أفضل منتج للسفر",
           "ما طرق الدفع المتاحة؟",
           "ما البيانات التي تجمعونها؟",
           "ما هي الشروط والأحكام؟",
+          "أين آخر طلب لي؟",
           "أحتاج موظف خدمة عملاء"
         ],
         integrations: integrationMap
@@ -91,11 +103,22 @@ export async function handler(event) {
     }
 
     if (method === "GET" && path === "/orders") {
+      if (!debugApiRoutesEnabled) {
+        return json(403, { error: "Debug order access is disabled in secure mode." });
+      }
+
       return json(200, { orders: listOrders() });
     }
 
     if (method === "GET" && path === "/analytics") {
-      return json(200, { events: chatbot.getAnalytics() });
+      if (!debugApiRoutesEnabled) {
+        return json(403, { error: "Support analytics are disabled in secure mode." });
+      }
+
+      return json(200, {
+        events: chatbot.getAnalytics(),
+        summary: chatbot.getAnalyticsSummary()
+      });
     }
 
     if (method === "POST" && path === "/chat") {
@@ -106,7 +129,10 @@ export async function handler(event) {
         message: parsed.message ?? "",
         preferredLocale: normalizeLocale(parsed.preferredLocale),
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined
+        knownOrders: Array.isArray(parsed.knownOrders) ? parsed.knownOrders : undefined,
+        openaiApiKey: allowRequestScopedOpenAIKey
+          ? event.headers?.["x-openai-key"] ?? event.headers?.["X-OpenAI-Key"] ?? null
+          : null
       });
 
       return json(200, {
@@ -125,15 +151,19 @@ export async function handler(event) {
       });
 
       return json(201, {
-        order,
-        orders: listOrders()
+        order
       });
     }
 
     return json(404, { error: "Not found" });
   } catch (error) {
-    return json(500, {
-      error: error instanceof Error ? error.message : "Unknown server error"
+    const message = error instanceof Error ? error.message : "Unknown server error";
+    const statusCode = message === "Request body too large" ? 413 : 500;
+    return json(statusCode, {
+      error:
+        statusCode === 413
+          ? "Request body too large."
+          : "Internal server error."
     });
   }
 }

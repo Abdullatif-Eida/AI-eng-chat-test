@@ -28,7 +28,7 @@ const localized = {
       {
         id: "wearables",
         eyebrow: "Smart watches",
-        title: "A demo that supports every step.",
+        title: "Support that helps at every step.",
         subtitle: "Clear products, easier decisions, and support before and after purchase.",
         cta: "Explore watch",
         supportCta: "Chat with us",
@@ -75,7 +75,7 @@ const localized = {
       {
         id: "earbuds",
         title: "Noise Cancelling Earbuds",
-        subtitle: "Used in the tracking and refund journeys for the support demo.",
+        subtitle: "A strong example for post-purchase support, delivery, and returns.",
         price: "SAR 104.99",
         accent: "visual-audio",
         prompt: "Tell me about the Noise Cancelling Earbuds"
@@ -114,10 +114,10 @@ const localized = {
       tax: "Tax",
       total: "Total",
       clearCart: "Clear cart",
-      placeDemoOrder: "Create demo order",
+      placeDemoOrder: "Create order",
       creatingOrder: "Creating order...",
       orderCreated: "Order created",
-      orderCreateFailed: "We couldn't create the demo order right now. Please try again.",
+      orderCreateFailed: "We couldn't create the order right now. Please try again.",
       orders: "Orders",
       orderItems: "Items",
       orderStatus: "Status",
@@ -128,6 +128,7 @@ const localized = {
       storeFeatures: "Store features",
       analytics: "View support log",
       analyticsTitle: "Recent analytics events",
+      analyticsSummaryTitle: "Journey summary",
       testimonials: "Customer reviews",
       policies: "Policies and trust",
       footerLinks: "Important links",
@@ -169,7 +170,7 @@ const localized = {
       terms: "Terms & conditions",
       returns: "Returns and exchange policy",
       privacy: "Usage and privacy policy",
-      storeBlurb: "A support-first demo showing how a smart assistant fits inside a KSA e-commerce storefront."
+      storeBlurb: "A support-first storefront showing how an AI agent can assist across a modern e-commerce journey."
     },
     widget: {
       homeTitle: "Hi there",
@@ -188,8 +189,8 @@ const localized = {
       chatTab: "Chat",
       previous: "Previous messages",
       quickActions: [
-        "Where is my order KS-10421?",
-        "I want a refund for KS-10388",
+        "Where is my latest order?",
+        "I want help with a refund",
         "Recommend the best product for travel",
         "What payment methods do you support?",
         "What data do you collect?",
@@ -201,14 +202,16 @@ const localized = {
       menuNewChat: "New chat",
       menuClose: "Close",
       poweredLabel: "POWERED BY",
-      poweredBrand: "LEAN ASSIST",
+      poweredBrand: "AI SUPPORT",
       meta: "Intent coverage: product info, tracking, returns, handoff",
       typing: "Typing…",
-      afterIntro: "Thanks {name}. I’ve saved your details and I’m ready to help. What would you like to do first?"
+      afterIntro: "Thanks {name}. I’ve saved your details and I’m ready to help. What would you like to do first?",
+      orderCreatedFollowUp:
+        "Your order {orderNumber} has been created. I can track it for you, explain the status, or check the shopper profile saved for this session."
     },
     brand: {
-      title: "Lean Souq",
-      subtitle: "Smart support commerce"
+      title: "Support Commerce",
+      subtitle: "AI-assisted storefront"
     }
   },
   ar: {
@@ -229,7 +232,7 @@ const localized = {
       {
         id: "wearables",
         eyebrow: "ساعات ذكية",
-        title: "ديمو يخدمك في كل لحظة",
+        title: "دعم يساعدك في كل لحظة",
         subtitle: "منتجات واضحة، ومساعد دعم جاهز للأسئلة قبل وبعد الشراء.",
         cta: "اكتشف الساعة",
         supportCta: "تحدث معنا",
@@ -276,7 +279,7 @@ const localized = {
       {
         id: "earbuds",
         title: "سماعات عازلة للضوضاء",
-        subtitle: "منتج مناسب لتجارب التتبع والاسترجاع داخل الديمو.",
+        subtitle: "منتج مناسب لسيناريوهات الدعم بعد الشراء والشحن والاسترجاع.",
         price: "١٠٤٫٩٩ ر.س",
         accent: "visual-audio",
         prompt: "أريد معرفة تفاصيل سماعات عازلة للضوضاء"
@@ -290,7 +293,7 @@ const localized = {
         prompt: "أحتاج مساعدة لاختيار شاحن سريع"
       }
     ],
-    supportKicker: "جوهر الديمو",
+    supportKicker: "جوهر التجربة",
     supportTitle: "الدعم هو أول شيء نصلحه داخل المتجر",
     supportBody:
       "بدل انتظار 8-12 ساعات، المستخدم يقدر يسأل عن المنتج، يتابع طلبه، يعرف شروط الإرجاع، أو يتحول لموظف خدمة عملاء من نفس الواجهة.",
@@ -329,6 +332,7 @@ const localized = {
       storeFeatures: "مميزات المتجر",
       analytics: "عرض سجل الدعم",
       analyticsTitle: "أحدث أحداث سجل الدعم",
+      analyticsSummaryTitle: "ملخص الرحلات",
       testimonials: "آراء العملاء",
       policies: "السياسات والثقة",
       footerLinks: "روابط مهمة",
@@ -389,8 +393,8 @@ const localized = {
       chatTab: "المحادثة",
       previous: "الرسائل السابقة",
       quickActions: [
-        "أين طلبي KS-10421؟",
-        "أريد استرداد الطلب KS-10388",
+        "أين آخر طلب لي؟",
+        "أريد مساعدة في الاسترداد",
         "رشح لي أفضل منتج للسفر",
         "ما طرق الدفع المتاحة؟",
         "ما البيانات التي تجمعونها؟",
@@ -402,14 +406,16 @@ const localized = {
       menuNewChat: "محادثة جديدة",
       menuClose: "إغلاق",
       poweredLabel: "مشغل بواسطة",
-      poweredBrand: "LEAN ASSIST",
+      poweredBrand: "AI SUPPORT",
       meta: "نطاق الخدمة: منتجات، تتبع، إرجاع، تصعيد",
       typing: "جاري الكتابة…",
-      afterIntro: "شكرًا {name}. حفظت بياناتك وأنا جاهز للمساعدة. ما الذي تريد البدء به؟"
+      afterIntro: "شكرًا {name}. حفظت بياناتك وأنا جاهز للمساعدة. ما الذي تريد البدء به؟",
+      orderCreatedFollowUp:
+        "تم إنشاء طلبك {orderNumber}. أقدر أتابع حالته لك، أشرح وضع الشحن، أو أراجع ملف العميل المحفوظ في هذه الجلسة."
     },
     brand: {
-      title: "Lean Souq",
-      subtitle: "دعم متجر ذكي"
+      title: "متجر الدعم",
+      subtitle: "واجهة تجارة مدعومة بالذكاء الاصطناعي"
     }
   }
 };
@@ -641,6 +647,27 @@ function buildProductPrompt(product, locale) {
   return locale === "ar" ? `أريد معرفة تفاصيل ${product.nameAr}` : `Tell me about the ${product.name}`;
 }
 
+function createChatMessage(role, text) {
+  return {
+    id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    role,
+    text,
+    sentAt: new Date().toISOString()
+  };
+}
+
+function formatMessageTime(sentAt, locale) {
+  if (!sentAt) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-SA" : "en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(new Date(sentAt));
+}
+
 function App() {
   const [siteLocale, setSiteLocale] = useState("en");
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
@@ -674,6 +701,7 @@ function App() {
   });
   const [loading, setLoading] = useState(false);
   const [analytics, setAnalytics] = useState(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const inputRef = useRef(null);
   const autoOpenedRef = useRef(false);
@@ -736,11 +764,7 @@ function App() {
       const data = await response.json();
       setBootstrapData(data);
       setMessages([
-        {
-          id: "welcome",
-          role: "bot",
-          text: data.welcome
-        }
+        createChatMessage("bot", data.welcome)
       ]);
     }
 
@@ -829,11 +853,7 @@ function App() {
     }
 
     setLoading(true);
-    const userEntry = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      text: nextMessage
-    };
+    const userEntry = createChatMessage("user", nextMessage);
     setMessages((current) => [...current, userEntry]);
     setDraft("");
 
@@ -862,11 +882,7 @@ function App() {
       setSessionId(data.sessionId);
       setMessages((current) => [
         ...current,
-        {
-          id: `bot-${Date.now()}`,
-          role: "bot",
-          text: data.reply
-        }
+        createChatMessage("bot", data.reply)
       ]);
     } finally {
       setLoading(false);
@@ -876,7 +892,14 @@ function App() {
   async function openAnalytics() {
     const response = await fetch("/api/analytics");
     const data = await response.json();
+
+    if (!response.ok) {
+      showToast(data.error ?? "Support analytics are unavailable right now.");
+      return;
+    }
+
     setAnalytics(data.events);
+    setAnalyticsSummary(data.summary ?? null);
     setShowAnalytics(true);
   }
 
@@ -978,13 +1001,22 @@ function App() {
       const data = await response.json();
 
       if (!response.ok || !data.order?.orderNumber) {
-        throw new Error(data.error || "Failed to create demo order");
+        throw new Error(data.error || "Failed to create order");
       }
 
       setOrderList((current) => mergeOrdersByNumber([data.order], current));
       setCartItems([]);
       setCartOpen(false);
       setCheckoutNotice(data.order.orderNumber);
+      setMessages((current) => [
+        ...current,
+        createChatMessage(
+          "bot",
+          fillTemplate(content.widget.orderCreatedFollowUp, {
+            orderNumber: data.order.orderNumber
+          })
+        )
+      ]);
       showToast(
         localizeText(
           siteLocale,
@@ -1008,11 +1040,7 @@ function App() {
     setCustomerProfile(nextProfile);
     setWidgetOpen(true);
     setWidgetView("chat");
-    const introMessage = {
-      id: `bot-profile-${Date.now()}`,
-      role: "bot",
-      text: fillTemplate(content.widget.afterIntro, { name: profile.name })
-    };
+    const introMessage = createChatMessage("bot", fillTemplate(content.widget.afterIntro, { name: profile.name }));
     setMessages((current) => [
       ...current,
       introMessage
@@ -1031,13 +1059,12 @@ function App() {
     setMessages(
       bootstrapData
         ? [
-            {
-              id: "welcome-reset",
-              role: "bot",
-              text: customerProfile.submitted
+            createChatMessage(
+              "bot",
+              customerProfile.submitted
                 ? fillTemplate(content.widget.afterIntro, { name: customerProfile.name })
                 : bootstrapData.welcome
-            }
+            )
           ]
         : []
     );
@@ -1297,6 +1324,34 @@ function App() {
                 ×
               </button>
             </div>
+            {analyticsSummary ? (
+              <div className="analytics-summary-grid">
+                <article className="analytics-summary-card">
+                  <span>{content.sections.analyticsSummaryTitle}</span>
+                  <strong>{analyticsSummary.totalTurns}</strong>
+                </article>
+                <article className="analytics-summary-card">
+                  <span>{localizeText(siteLocale, "Contained", "تم الاحتواء")}</span>
+                  <strong>{analyticsSummary.containedTurns}</strong>
+                </article>
+                <article className="analytics-summary-card">
+                  <span>{localizeText(siteLocale, "Pre-purchase", "قبل الشراء")}</span>
+                  <strong>{analyticsSummary.prePurchaseTurns}</strong>
+                </article>
+                <article className="analytics-summary-card">
+                  <span>{localizeText(siteLocale, "Post-purchase", "بعد الشراء")}</span>
+                  <strong>{analyticsSummary.postPurchaseTurns}</strong>
+                </article>
+                <article className="analytics-summary-card">
+                  <span>{localizeText(siteLocale, "Account support", "دعم الحساب")}</span>
+                  <strong>{analyticsSummary.accountSupportTurns}</strong>
+                </article>
+                <article className="analytics-summary-card">
+                  <span>{localizeText(siteLocale, "Human handoff", "التحويل البشري")}</span>
+                  <strong>{analyticsSummary.handoffTurns}</strong>
+                </article>
+              </div>
+            ) : null}
             <pre>{JSON.stringify(analytics ?? [], null, 2)}</pre>
           </div>
         </div>
@@ -1452,8 +1507,8 @@ function AccountPage({
             {hasProfile
               ? localizeText(
                   locale,
-                  "Your saved profile and demo orders are stored locally on this device, so you can return and continue tracking from the same account view.",
-                  "نحفظ ملفك وطلباتك التجريبية محليًا على هذا الجهاز حتى تتمكن من الرجوع ومتابعة الطلبات من نفس الصفحة."
+                  "Your saved profile and recent orders are stored locally on this device, so you can return and continue from the same account view.",
+                  "نحفظ ملفك وطلباتك الأخيرة محليًا على هذا الجهاز حتى تتمكن من الرجوع ومتابعة الطلبات من نفس الصفحة."
                 )
               : localizeText(
                   locale,
@@ -1471,7 +1526,7 @@ function AccountPage({
           </div>
           {checkoutNotice ? (
             <div className="account-notice">
-              <strong>{localizeText(locale, "Latest demo order", "آخر طلب تجريبي")}</strong>
+              <strong>{localizeText(locale, "Latest order", "آخر طلب")}</strong>
               <span>{checkoutNotice}</span>
             </div>
           ) : null}
@@ -1507,12 +1562,12 @@ function AccountPage({
 
         {!hasProfile && orders.length > 0 ? (
           <div className="account-inline-note">
-            <strong>{localizeText(locale, "Local demo orders saved", "تم حفظ الطلبات التجريبية المحلية")}</strong>
+            <strong>{localizeText(locale, "Saved local orders", "تم حفظ الطلبات المحلية")}</strong>
             <p>
               {localizeText(
                 locale,
-                "These demo orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
-                "تم إنشاء هذه الطلبات التجريبية على هذا الجهاز. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
+                "These local orders were created on this device. Add your support details anytime to link future orders to your shopper profile too.",
+                "تم إنشاء هذه الطلبات المحلية على هذا الجهاز. يمكنك إضافة بياناتك لاحقًا لربط الطلبات القادمة بملفك الشخصي أيضًا."
               )}
             </p>
           </div>
@@ -1529,13 +1584,13 @@ function AccountPage({
               {hasProfile
                 ? localizeText(
                     locale,
-                    "Create a demo order from the cart and it will appear here with a realistic status history.",
-                    "أنشئ طلبًا تجريبيًا من السلة وسيظهر هنا بحالة طلب واقعية."
+                    "Create an order from the cart and it will appear here with its latest status.",
+                    "أنشئ طلبًا من السلة وسيظهر هنا مع أحدث حالة له."
                   )
                 : localizeText(
                     locale,
-                    "Open the support widget, introduce yourself, and any future demo order will be attached to your saved account.",
-                    "افتح نافذة الدعم وعرّف بنفسك، وبعدها سيتم ربط أي طلب تجريبي جديد بحسابك المحفوظ."
+                    "Open the support widget, introduce yourself, and future orders will be attached to your saved account.",
+                    "افتح نافذة الدعم وعرّف بنفسك، وبعدها سيتم ربط الطلبات القادمة بحسابك المحفوظ."
                   )}
             </p>
           </div>
@@ -1600,8 +1655,8 @@ function OrderDetailsPage({ content, locale, onBackToOrders, onBackToStore, onOp
           <p>
             {localizeText(
               locale,
-              `We couldn't find ${orderNumber} in the saved demo orders on this device.`,
-              `لم نتمكن من العثور على ${orderNumber} ضمن الطلبات التجريبية المحفوظة على هذا الجهاز.`
+              `We couldn't find ${orderNumber} in the saved orders on this device.`,
+              `لم نتمكن من العثور على ${orderNumber} ضمن الطلبات المحفوظة على هذا الجهاز.`
             )}
           </p>
           <div className="account-hero-actions">
@@ -1850,7 +1905,7 @@ function CartDrawer({
                 <p>
                   {locale === "ar"
                     ? "بعد إنشاء الطلب التجريبي، يمكن متابعة حالة الطلب أو الإرجاع مباشرة من الشات."
-                    : "After creating the demo order, the customer can immediately track the order or ask for a return in chat."}
+                    : "After creating the order, the customer can immediately track it or ask for a return in chat."}
                 </p>
               </div>
               <div className="cart-footer">
@@ -2122,8 +2177,11 @@ function SupportWidget({
           ) : null}
         </div>
         <div className="widget-brand">
-          <span className="wave">👋</span>
-          <strong>{view === "home" ? text.homeTitle : text.chatTitle}</strong>
+          <div className="widget-brand-avatar">LA</div>
+          <div className="widget-brand-copy">
+            <strong>{view === "home" ? text.homeTitle : text.chatTitle}</strong>
+            <span>{localizeText(locale, "Usually replies instantly", "يرد غالباً بشكل فوري")}</span>
+          </div>
         </div>
         <div className="widget-header-end">
           <button className="widget-icon widget-close" type="button" onClick={onClose} aria-label="Close">
@@ -2217,11 +2275,29 @@ function SupportWidget({
 
             <div className="message-list">
               {messages.map((message) => (
-                <article key={message.id} className={`message-bubble ${message.role}`}>
-                  <p>{message.text}</p>
+                <article key={message.id} className={`message-row ${message.role}`}>
+                  {message.role === "bot" ? <div className="message-avatar">LA</div> : null}
+                  <div className={`message-bubble ${message.role}`}>
+                    <p>{message.text}</p>
+                    <div className="message-meta">
+                      <span>{formatMessageTime(message.sentAt, locale)}</span>
+                      {message.role === "user" ? <span className="message-status">✓✓</span> : null}
+                    </div>
+                  </div>
                 </article>
               ))}
-              {loading ? <article className="message-bubble bot"><p>{text.typing}</p></article> : null}
+              {loading ? (
+                <article className="message-row bot typing-row">
+                  <div className="message-avatar">LA</div>
+                  <div className="message-bubble bot typing-bubble">
+                    <div className="typing-dots" aria-label={text.typing}>
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  </div>
+                </article>
+              ) : null}
             </div>
           </div>
 
@@ -2250,7 +2326,11 @@ function SupportWidget({
                 ))}
               </div>
             ) : null}
-            <button className="send-button" type="submit">
+            <button
+              className={`send-button ${draft.trim() ? "ready" : ""}`}
+              type="submit"
+              aria-label={localizeText(locale, "Send message", "إرسال الرسالة")}
+            >
               <SendIcon />
             </button>
             <input

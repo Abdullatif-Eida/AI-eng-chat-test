@@ -1,6 +1,6 @@
-# Lean Assist POC
+# AI Commerce Support Agent
 
-Lean Assist is a small AI-first customer support chatbot prototype for the Lean Scale AI Product Engineer case study. It is designed for a mid-sized KSA e-commerce retailer and focuses on four MVP outcomes:
+This project is an AI-first customer support agent prototype for a generic e-commerce case study. It focuses on four MVP outcomes:
 
 - Product information
 - Order tracking
@@ -11,7 +11,7 @@ The implementation is intentionally dependency-light so reviewers can run it qui
 
 ## Submission links
 
-- Live demo: [https://chat-bot-case.netlify.app](https://chat-bot-case.netlify.app)
+- Live site: [https://chat-bot-case.netlify.app](https://chat-bot-case.netlify.app)
 
 ## Quick start
 
@@ -21,13 +21,45 @@ The implementation is intentionally dependency-light so reviewers can run it qui
 npm install
 ```
 
-2. Start the local demo server:
+2. Configure the OpenAI key on the server side.
+
+For local development:
+
+```bash
+export OPENAI_API_KEY="your_openai_key_here"
+```
+
+For Netlify:
+
+- Set `OPENAI_API_KEY` in the Netlify site environment variables.
+- You can also use `NETLIFY_OPENAI_API_KEY` if you want a Netlify-specific secret name.
+- Do not expose the key in client-side code.
+
+To connect real commerce systems instead of the seeded provider, you can also set:
+
+- `COMMERCE_API_BASE_URL`
+- `COMMERCE_API_KEY` (optional bearer token)
+- `COMMERCE_API_HEADERS_JSON` (optional JSON object for extra headers)
+- `COMMERCE_CUSTOMER_PROFILE_PATH` default: `/customers/profile?email={email}`
+- `COMMERCE_CUSTOMER_ORDERS_PATH` default: `/orders?email={email}`
+- `COMMERCE_ORDER_DETAILS_PATH` default: `/orders/{orderNumber}`
+
+These paths support `{email}`, `{customerId}`, and `{orderNumber}` placeholders.
+
+The backend also accepts an override header named `x-openai-key` on `/api/chat`, but that should only be used by trusted server-to-server callers.
+
+Optional debug-only routes:
+
+- Set `ENABLE_DEBUG_API_ROUTES=true` only in local review/demo environments if you want `GET /api/analytics` or `GET /api/orders`.
+- These routes are disabled by default in secure mode so broad internal data is not exposed accidentally.
+
+3. Start the local server:
 
 ```bash
 npm start
 ```
 
-3. Open `http://localhost:3000`.
+4. Open `http://localhost:3000`.
 
 ## Run tests
 
@@ -41,34 +73,37 @@ npm test
 
 - This project is designed to be reviewed from source code directly, including a zip or shared folder.
 - `npm start` builds the frontend bundle and starts the local server on port `3000`.
-- No external services are required for the default deterministic demo flow.
-- Optional OpenAI behavior is supported in code, but the app still runs without any API key.
+- The chatbot is OpenAI-only and requires a valid server-side OpenAI key.
+- The recommended production setup is a Netlify environment variable, not a browser-exposed key.
+- If `COMMERCE_API_BASE_URL` is configured, the tool layer will use your real commerce APIs; otherwise it uses the seeded provider bundled with the project.
 
 ## What is included
 
-- A browser-based chat demo
-- Mock catalog, order, and returns-policy data grounded in the supplied portfolio-company files
+- A browser-based chat experience
+- Catalog, order, and policy data adapters that can sit behind real commerce APIs
 - Explicit mock integration map for catalog, orders, returns, and CRM handoff
 - Multi-turn session handling for order lookups and refund flows
 - Basic analytics log for intent, resolution type, and locale
 - Arabic-aware locale detection with bilingual sample journeys
-- Optional OpenAI-powered response composition with deterministic fallback
-- Case-study docs for problem framing, solution design, tooling decisions, and demo script
+- OpenAI Responses API orchestration over trusted commerce tools
+- Dedicated outbound tokenization layer so emails, order numbers, and similar identifiers are not sent raw to OpenAI
+- Provider-based commerce backend integration, ready for existing profile, order, and tracking APIs
+- Case-study docs for problem framing, solution design, and tooling decisions
 - KSA-aligned policy grounding for returns, privacy, and terms responses
 
 ## Assumptions
 
 - The portfolio company is a mid-sized e-commerce retailer operating in KSA.
 - The first support channel is website chat, with future extension to WhatsApp and CRM/ticketing systems.
-- The MVP should be bilingual-ready for Arabic and English, even if the demo is primarily in English.
+- The MVP should be bilingual-ready for Arabic and English.
 - Product facts, order data, and refund policies should come from trusted systems, not free-form generation.
 - Human handoff is part of the MVP because confidence fallback is important for trust and CSAT.
 
-## Suggested demo prompts
+## Suggested prompts
 
 - `Tell me about the Wireless Mouse`
 - `Show me products`
 - `How do returns work?`
-- `Create a demo order, then ask where it is`
+- `Create an order, then ask where it is`
 - `I want to speak to a human agent`
 - `اعرض المنتجات`
