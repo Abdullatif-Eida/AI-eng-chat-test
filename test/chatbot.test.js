@@ -1171,6 +1171,65 @@ test("lists items for latest-order follow-up questions without falling back to t
   }
 });
 
+test("rebuilds order follow-up context from browser conversation history after server memory is lost", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let fetchCalls = 0;
+  global.fetch = async () => {
+    fetchCalls += 1;
+    return createJsonResponse({
+      error: {
+        message: "Provider should not be used for history-backed deterministic order follow-ups."
+      }
+    }, 500);
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "browser-history-order-follow-up",
+      message: "what products it has",
+      customerProfile: {
+        email: "shopper@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10540",
+          customerName: "Demo Shopper",
+          email: "shopper@example.com",
+          status: "Processing",
+          eta: "Expected to ship tomorrow",
+          deliveryDate: null,
+          paymentStatus: "Paid",
+          courier: "Pending assignment",
+          items: [{ productId: "sku002-mechanical-keyboard", quantity: 1 }]
+        }
+      ],
+      conversationHistory: [
+        {
+          role: "assistant",
+          content: "Your latest visible order is KS-10540. Status: Processing. ETA: Expected to ship tomorrow. Courier: Pending assignment."
+        }
+      ]
+    });
+
+    assert.equal(result.intent, "order_tracking");
+    assert.equal(result.structured?.resolution, "answered");
+    assert.equal(fetchCalls, 0);
+    assert.match(result.reply, /KS-10540/);
+    assert.match(result.reply, /Mechanical Keyboard/);
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("treats a bare order number as an order follow-up when recent order context exists", async () => {
   const previousKey = process.env.OPENROUTER_API_KEY;
   const previousFetch = global.fetch;

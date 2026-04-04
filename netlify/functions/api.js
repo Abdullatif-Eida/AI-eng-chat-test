@@ -8,6 +8,7 @@ import {
   readSessionRetentionValue,
   writeSessionRetentionValue
 } from "../../src/lib/sessionRetention.js";
+import { mergeTrustedKnownOrders } from "../../src/lib/trustedOrderSync.js";
 
 const chatbot = createChatbot({
   commerceProvider: createCommerceProviderFromEnv(),
@@ -68,10 +69,7 @@ function readTrustedOrdersForSession(sessionId) {
 
 function rememberTrustedOrder(sessionId, order) {
   const existingOrders = readTrustedOrdersForSession(sessionId);
-  const dedupedOrders = [
-    order,
-    ...existingOrders.filter((entry) => entry?.orderNumber !== order?.orderNumber)
-  ].slice(0, maxTrustedOrdersPerSession);
+  const dedupedOrders = mergeTrustedKnownOrders(existingOrders, [order], maxTrustedOrdersPerSession);
 
   writeSessionRetentionValue(trustedSessionOrders, sessionId, dedupedOrders, {
     ttlMs: trustedSessionOrdersTtlMs
@@ -157,12 +155,25 @@ export async function handler(event) {
     if (method === "POST" && path === "/chat") {
       const parsed = parseBody(event.body);
       const sessionId = normalizeSessionId(parsed.sessionId);
+      const mergedKnownOrders = mergeTrustedKnownOrders(
+        readTrustedOrdersForSession(sessionId),
+        parsed.knownOrders,
+        maxTrustedOrdersPerSession
+      );
+
+      if (Array.isArray(parsed.knownOrders) && parsed.knownOrders.length > 0) {
+        writeSessionRetentionValue(trustedSessionOrders, sessionId, mergedKnownOrders, {
+          ttlMs: trustedSessionOrdersTtlMs
+        });
+      }
+
       const result = await chatbot.chat({
         sessionId,
         message: parsed.message ?? "",
         preferredLocale: normalizeLocale(parsed.preferredLocale),
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: readTrustedOrdersForSession(sessionId),
+        knownOrders: mergedKnownOrders,
+        conversationHistory: parsed.conversationHistory ?? null,
         openrouterApiKey: allowRequestScopedOpenRouterKey
           ? event.headers?.["x-openrouter-key"] ??
             event.headers?.["X-OpenRouter-Key"] ??

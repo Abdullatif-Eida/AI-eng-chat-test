@@ -14,6 +14,7 @@ import {
   readSessionRetentionValue,
   writeSessionRetentionValue
 } from "./lib/sessionRetention.js";
+import { mergeTrustedKnownOrders } from "./lib/trustedOrderSync.js";
 import { integrationMap } from "./integrations/index.js";
 import { createOrder, listOrders } from "./data/orders.js";
 import { products } from "./data/products.js";
@@ -95,10 +96,7 @@ function readTrustedOrdersForSession(sessionId) {
 
 function rememberTrustedOrder(sessionId, order) {
   const existingOrders = readTrustedOrdersForSession(sessionId);
-  const dedupedOrders = [
-    order,
-    ...existingOrders.filter((entry) => entry?.orderNumber !== order?.orderNumber)
-  ].slice(0, maxTrustedOrdersPerSession);
+  const dedupedOrders = mergeTrustedKnownOrders(existingOrders, [order], maxTrustedOrdersPerSession);
 
   writeSessionRetentionValue(trustedSessionOrders, sessionId, dedupedOrders, {
     ttlMs: trustedSessionOrdersTtlMs
@@ -202,12 +200,25 @@ const server = http.createServer(async (request, response) => {
       const rawBody = await readRequestBody(request);
       const parsed = parseJsonBody(rawBody);
       const sessionId = normalizeSessionId(parsed.sessionId);
+      const mergedKnownOrders = mergeTrustedKnownOrders(
+        readTrustedOrdersForSession(sessionId),
+        parsed.knownOrders,
+        maxTrustedOrdersPerSession
+      );
+
+      if (Array.isArray(parsed.knownOrders) && parsed.knownOrders.length > 0) {
+        writeSessionRetentionValue(trustedSessionOrders, sessionId, mergedKnownOrders, {
+          ttlMs: trustedSessionOrdersTtlMs
+        });
+      }
+
       const result = await chatbot.chat({
         sessionId,
         message: parsed.message ?? "",
         preferredLocale: parsed.preferredLocale === "ar" ? "ar" : "en",
         customerProfile: parsed.customerProfile ?? null,
-        knownOrders: readTrustedOrdersForSession(sessionId),
+        knownOrders: mergedKnownOrders,
+        conversationHistory: parsed.conversationHistory ?? null,
         openrouterApiKey: allowRequestScopedOpenRouterKey ? request.headers["x-openrouter-key"] : null
       });
 

@@ -835,6 +835,19 @@ function buildClientErrorReply(text, error, responseStatus = 0) {
   return text.temporaryError;
 }
 
+function buildConversationHistory(messages = []) {
+  return messages
+    .filter((message) => {
+      const role = String(message?.role ?? "").trim().toLowerCase();
+      return (role === "user" || role === "bot") && (message?.kind ?? "standard") === "standard";
+    })
+    .map((message) => ({
+      role: message.role === "bot" ? "assistant" : message.role,
+      content: String(message.text ?? "")
+    }))
+    .slice(-16);
+}
+
 function formatMessageTime(sentAt, locale) {
   if (!sentAt) {
     return "";
@@ -1126,6 +1139,8 @@ function App() {
           sessionId,
           message: trimmedMessage,
           preferredLocale: siteLocale,
+          knownOrders: visibleOrderSource,
+          conversationHistory: buildConversationHistory(messages),
           customerProfile: customerProfile.submitted
             ? {
                 name: customerProfile.name,

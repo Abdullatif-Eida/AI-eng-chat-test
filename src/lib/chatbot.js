@@ -17,6 +17,7 @@ const MAX_ANALYTICS_EVENTS = 200;
 const MAX_MESSAGE_CHARS = 4000;
 const MAX_CACHE_ENTRIES = 48;
 const MAX_IDEMPOTENCY_ENTRIES = 16;
+const ALLOWED_HISTORY_ROLES = new Set(["user", "assistant"]);
 
 function normalizeEmail(email = "") {
   return String(email ?? "").trim().toLowerCase();
@@ -123,6 +124,60 @@ function sanitizeCustomerProfile(profile) {
     ...(customerNumber ? { customerNumber } : {}),
     ...(typeof newsletter === "boolean" ? { newsletter } : {})
   };
+}
+
+function sanitizeConversationHistory(history) {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return null;
+      }
+
+      const kind = entry.kind ? String(entry.kind) : "standard";
+      if (kind !== "standard") {
+        return null;
+      }
+
+      const rawRole = String(entry.role ?? "").trim().toLowerCase();
+      const role = rawRole === "bot" ? "assistant" : rawRole;
+      if (!ALLOWED_HISTORY_ROLES.has(role)) {
+        return null;
+      }
+
+      const content = sanitizeMessage(entry.text ?? entry.content ?? "");
+      if (!content) {
+        return null;
+      }
+
+      return {
+        role,
+        content
+      };
+    })
+    .filter(Boolean)
+    .slice(-MAX_HISTORY_ENTRIES);
+}
+
+function synchronizeSessionHistory(session, conversationHistory) {
+  const safeHistory = sanitizeConversationHistory(conversationHistory);
+  if (safeHistory.length === 0) {
+    return;
+  }
+
+  const tokenizedHistory = safeHistory.map((entry) => ({
+    role: entry.role,
+    content: tokenizeText(entry.content, session.sharingBoundary)
+  }));
+
+  if (JSON.stringify(session.history) === JSON.stringify(tokenizedHistory)) {
+    return;
+  }
+
+  session.history = tokenizedHistory;
 }
 
 function detectMessageLocale(message = "") {
@@ -402,6 +457,7 @@ export function createChatbot({
     preferredLocale,
     customerProfile,
     knownOrders,
+    conversationHistory,
     openrouterApiKey
   }) {
     const session = getSession(sessionId);
@@ -430,6 +486,10 @@ export function createChatbot({
           analytics.splice(0, analytics.length - MAX_ANALYTICS_EVENTS);
         }
       }
+    }
+
+    if (!session.pendingTurn) {
+      synchronizeSessionHistory(session, conversationHistory);
     }
 
     if (!trimmedMessage) {
