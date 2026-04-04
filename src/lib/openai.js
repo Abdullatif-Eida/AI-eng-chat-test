@@ -223,7 +223,7 @@ async function requestWithModelFallback({
 
 export function createSupportAgent({ track = () => {} } = {}) {
   const config = {
-    defaultModel: process.env.OPENAI_MODEL || "gpt-5.4-mini",
+    defaultModel: process.env.OPENAI_MODEL || "gpt-5-mini",
     cheapModel: process.env.OPENAI_CHEAP_MODEL || "gpt-5-nano",
     complexModel: process.env.OPENAI_COMPLEX_MODEL || "gpt-5.4"
   };

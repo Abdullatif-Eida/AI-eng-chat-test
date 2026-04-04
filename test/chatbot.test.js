@@ -804,6 +804,72 @@ test("retries with a fallback model when the first model is unavailable", async 
   }
 });
 
+test("uses gpt-5-mini for same-session follow-up turns by default", async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousCheapModel = process.env.OPENAI_CHEAP_MODEL;
+  const previousDefaultModel = process.env.OPENAI_MODEL;
+  const previousFetch = global.fetch;
+  process.env.OPENAI_API_KEY = "test-key";
+  process.env.OPENAI_CHEAP_MODEL = "gpt-5-nano";
+  delete process.env.OPENAI_MODEL;
+
+  const requestedModels = [];
+  const upstreamFetch = createMockOpenAIFetch();
+  global.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    requestedModels.push(body.model);
+
+    return upstreamFetch(url, options);
+  };
+
+  try {
+    const bot = createChatbot();
+    const first = await bot.chat({
+      sessionId: "same-session-fallback",
+      message: "Tell me about the Mechanical Keyboard",
+      customerProfile: {
+        name: "Abdullatif Eida",
+        email: "test@example.com"
+      }
+    });
+
+    const second = await bot.chat({
+      sessionId: "same-session-fallback",
+      message: "Tell me about the Wireless Mouse",
+      customerProfile: {
+        name: "Abdullatif Eida",
+        email: "test@example.com"
+      }
+    });
+
+    assert.equal(first.intent, "product_information");
+    assert.equal(second.intent, "product_information");
+    assert.equal(requestedModels[0], "gpt-5-nano");
+    assert.ok(requestedModels.includes("gpt-5-mini"));
+    assert.ok(requestedModels.indexOf("gpt-5-nano") < requestedModels.indexOf("gpt-5-mini"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
+    } else {
+      process.env.OPENAI_API_KEY = previousKey;
+    }
+
+    if (previousCheapModel === undefined) {
+      delete process.env.OPENAI_CHEAP_MODEL;
+    } else {
+      process.env.OPENAI_CHEAP_MODEL = previousCheapModel;
+    }
+
+    if (previousDefaultModel === undefined) {
+      delete process.env.OPENAI_MODEL;
+    } else {
+      process.env.OPENAI_MODEL = previousDefaultModel;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
 test("accepts a request-scoped OpenAI key override for trusted backend callers", async () => {
   const previousKey = process.env.OPENAI_API_KEY;
   delete process.env.OPENAI_API_KEY;
