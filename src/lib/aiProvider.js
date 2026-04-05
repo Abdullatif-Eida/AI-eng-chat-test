@@ -19,6 +19,7 @@ import {
   selectSupportModel
 } from "./supportBrain.js";
 
+
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/responses";
 const DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v3.2";
 const OPENROUTER_TIMEOUT_MS = Number(
