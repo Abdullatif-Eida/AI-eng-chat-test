@@ -2465,7 +2465,13 @@ html[dir="rtl"] .cart-list {
   text-align: start;
 }
 
-.message-bubble p {
+.message-content {
+  display: grid;
+  gap: 10px;
+}
+
+.message-content p,
+.message-content ul {
   margin: 0;
   line-height: 1.62;
   font-size: 0.9rem;
@@ -2484,11 +2490,21 @@ html[dir="rtl"] .cart-list {
   text-align: left;
 }
 
-.message-bubble.message-rtl p {
+.message-content ul {
+  padding-inline-start: 18px;
+}
+
+.message-content li + li {
+  margin-top: 6px;
+}
+
+.message-bubble.message-rtl .message-content p,
+.message-bubble.message-rtl .message-content ul {
   text-align: right;
 }
 
-.message-bubble.message-ltr p {
+.message-bubble.message-ltr .message-content p,
+.message-bubble.message-ltr .message-content ul {
   text-align: left;
 }
 

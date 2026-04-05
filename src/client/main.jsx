@@ -849,6 +849,65 @@ function inferMessageDirection(text, locale) {
   return arabicMatches.length > latinMatches.length ? "rtl" : "ltr";
 }
 
+function renderInlineMessage(text = "") {
+  const parts = String(text ?? "").split(/(\*\*[^*\n]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    const isBoldToken = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+
+    if (isBoldToken) {
+      return <strong key={`bold-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+
+    return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
+  });
+}
+
+function normalizeMessageBlocks(text = "") {
+  const normalized = String(text ?? "").replace(/\r\n?/g, "\n").trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const withSuggestedBreaks = normalized.includes("\n")
+    ? normalized
+    : normalized
+        .replace(/([.?!]) (Another(?: great)? option is\b)/g, "$1\n\n$2")
+        .replace(/([.?!]) (The \*\*[^*\n]+\*\* .*?\bis also\b)/g, "$1\n\n$2")
+        .replace(/([.?!]) ((?:Which|Would|Do|Are|Is|Any) [^?.!]*\?)$/g, "$1\n\n$2");
+
+  return withSuggestedBreaks
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+}
+
+function renderFormattedMessage(text = "") {
+  const blocks = normalizeMessageBlocks(text);
+
+  return blocks.map((block, index) => {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const isBulletList =
+      lines.length > 0 &&
+      lines.every((line) => /^([-*•]|\d+\.)\s+/.test(line));
+
+    if (isBulletList) {
+      return (
+        <ul key={`list-${index}`}>
+          {lines.map((line, itemIndex) => (
+            <li key={`item-${index}-${itemIndex}`}>
+              {renderInlineMessage(line.replace(/^([-*•]|\d+\.)\s+/, ""))}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    return <p key={`paragraph-${index}`}>{renderInlineMessage(block)}</p>;
+  });
+}
+
 function App() {
   const [siteLocale, setSiteLocale] = useState(() => readStorage(STORAGE_KEYS.locale, "en"));
   const [route, setRoute] = useState(() => parseRoute(window.location.pathname));
@@ -2765,7 +2824,9 @@ function SupportWidget({
                       className={`message-bubble ${message.role} message-${messageDirection} ${message.kind === "error" ? "message-error" : ""}`}
                       dir={messageDirection}
                     >
-                      <p>{message.text}</p>
+                      <div className="message-content">
+                        {message.role === "bot" ? renderFormattedMessage(message.text) : <p>{message.text}</p>}
+                      </div>
                       {message.retryable ? (
                         <div className="message-actions">
                           <button

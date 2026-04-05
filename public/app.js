@@ -23011,6 +23011,35 @@ function inferMessageDirection(text, locale) {
   }
   return arabicMatches.length > latinMatches.length ? "rtl" : "ltr";
 }
+function renderInlineMessage(text = "") {
+  const parts = String(text ?? "").split(/(\*\*[^*\n]+\*\*)/g);
+  return parts.map((part, index) => {
+    const isBoldToken = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+    if (isBoldToken) {
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: part.slice(2, -2) }, `bold-${index}`);
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_react.default.Fragment, { children: part }, `text-${index}`);
+  });
+}
+function normalizeMessageBlocks(text = "") {
+  const normalized = String(text ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!normalized) {
+    return [];
+  }
+  const withSuggestedBreaks = normalized.includes("\n") ? normalized : normalized.replace(/([.?!]) (Another(?: great)? option is\b)/g, "$1\n\n$2").replace(/([.?!]) (The \*\*[^*\n]+\*\* .*?\bis also\b)/g, "$1\n\n$2").replace(/([.?!]) ((?:Which|Would|Do|Are|Is|Any) [^?.!]*\?)$/g, "$1\n\n$2");
+  return withSuggestedBreaks.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+}
+function renderFormattedMessage(text = "") {
+  const blocks = normalizeMessageBlocks(text);
+  return blocks.map((block, index) => {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const isBulletList = lines.length > 0 && lines.every((line) => /^([-*•]|\d+\.)\s+/.test(line));
+    if (isBulletList) {
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", { children: lines.map((line, itemIndex) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: renderInlineMessage(line.replace(/^([-*•]|\d+\.)\s+/, "")) }, `item-${index}-${itemIndex}`)) }, `list-${index}`);
+    }
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: renderInlineMessage(block) }, `paragraph-${index}`);
+  });
+}
 function App() {
   const [siteLocale, setSiteLocale] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.locale, "en"));
   const [route, setRoute] = (0, import_react.useState)(() => parseRoute(window.location.pathname));
@@ -24541,7 +24570,7 @@ function SupportWidget({
                     className: `message-bubble ${message.role} message-${messageDirection} ${message.kind === "error" ? "message-error" : ""}`,
                     dir: messageDirection,
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
+                      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-content", children: message.role === "bot" ? renderFormattedMessage(message.text) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }) }),
                       message.retryable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                         "button",
                         {
