@@ -1143,6 +1143,27 @@ test("prefers English replies when the shopper writes in English on an Arabic st
   });
 });
 
+test("builds English model instructions for English shopper turns on an Arabic storefront", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "english-instructions-on-ar-storefront",
+      message: "I need to know products of KS-10540",
+      preferredLocale: "ar"
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const firstBody = bodies.find((body) =>
+    !(body.input ?? []).some((item) => item?.type === "function_call_output")
+  );
+
+  assert.ok(firstBody);
+  assert.match(firstBody.instructions, /Trusted storefront knowledge available on every turn/i);
+  assert.doesNotMatch(firstBody.instructions, /معلومات المتجر الموثوقة المتاحة لك في كل محادثة|كتالوج المنتجات المتاح/);
+});
+
 test("switches back to English when a shopper follows an Arabic turn with an English message", async () => {
   await withMockedOpenRouter(async () => {
     const bot = createChatbot();

@@ -24228,9 +24228,7 @@ function SupportWidget({
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
   const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
-  const [showMenu, setShowMenu] = (0, import_react.useState)(false);
   const [showEmojiPicker, setShowEmojiPicker] = (0, import_react.useState)(false);
-  const [compactMode, setCompactMode] = (0, import_react.useState)(false);
   const [leadName, setLeadName] = (0, import_react.useState)("");
   const [leadEmail, setLeadEmail] = (0, import_react.useState)("");
   const [leadNewsletter, setLeadNewsletter] = (0, import_react.useState)(false);
@@ -24247,7 +24245,6 @@ function SupportWidget({
   ]);
   (0, import_react.useEffect)(() => {
     if (!open) {
-      setShowMenu(false);
       setShowEmojiPicker(false);
     }
   }, [open]);
@@ -24380,67 +24377,10 @@ function SupportWidget({
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "aside",
     {
-      className: `support-widget ${open ? "open" : ""} ${compactMode ? "compact" : ""} ${view === "home" ? "view-home" : "view-chat"}`,
+      className: `support-widget ${open ? "open" : ""} ${view === "home" ? "view-home" : "view-chat"}`,
       "aria-label": "Support widget",
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-actions widget-actions-menu", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-              "button",
-              {
-                className: "widget-icon",
-                type: "button",
-                onClick: () => setShowMenu((current) => !current),
-                "aria-label": "Widget actions",
-                children: "\u22EE"
-              }
-            ),
-            view !== "home" ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-              "button",
-              {
-                className: "widget-icon",
-                type: "button",
-                onClick: () => setCompactMode((current) => !current),
-                "aria-label": "Toggle compact mode",
-                children: "\u2195"
-              }
-            ) : null,
-            showMenu ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-menu", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    onSetView("home");
-                    setShowMenu(false);
-                  },
-                  children: text.menuHome
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    onResetConversation();
-                    setShowMenu(false);
-                  },
-                  children: text.menuNewChat
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                "button",
-                {
-                  type: "button",
-                  onClick: () => {
-                    onClose();
-                    setShowMenu(false);
-                  },
-                  children: text.menuClose
-                }
-              )
-            ] }) : null
-          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-brand", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-brand-avatar", children: "LA" }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-brand-copy", children: [
@@ -24454,7 +24394,7 @@ function SupportWidget({
           ] })
         ] }),
         view === "home" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-home", children: [
-          !customerProfile.submitted ? supportOverview : null,
+          customerProfile.submitted ? leadCaptureSection : supportOverview,
           !customerProfile.submitted ? leadCaptureSection : null,
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-hero", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-home-eyebrow", children: localizeText(locale, "Storefront support", "\u062F\u0639\u0645 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062A\u062C\u0631") }),
@@ -24463,7 +24403,6 @@ function SupportWidget({
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-capability-row", children: capabilityPills.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-capability-pill", children: item }, item)) })
           ] }),
           customerProfile.submitted ? supportOverview : null,
-          customerProfile.submitted ? leadCaptureSection : null,
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-section", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Start with a guided topic", "\u0627\u0628\u062F\u0623 \u0628\u0645\u0648\u0636\u0648\u0639 \u062C\u0627\u0647\u0632") }),

@@ -684,7 +684,10 @@ export function createSupportAgent({ track = () => {} } = {}) {
     });
     const instructions = buildSupportInstructions({
       locale,
-      storeContext: buildStorefrontContext(storefrontLocale ?? locale ?? "en"),
+      // Keep the full prompt in the shopper's active language for this turn.
+      // Mixing a large storefront context in the site locale can pull the model
+      // away from replying in the language of the latest message.
+      storeContext: buildStorefrontContext(locale ?? storefrontLocale ?? "en"),
       sessionContext: buildSessionContext({
         customer,
         knownOrders,

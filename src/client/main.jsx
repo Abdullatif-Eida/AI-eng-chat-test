@@ -2436,9 +2436,7 @@ function SupportWidget({
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
   const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
-  const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [compactMode, setCompactMode] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadNewsletter, setLeadNewsletter] = useState(false);
@@ -2457,7 +2455,6 @@ function SupportWidget({
 
   useEffect(() => {
     if (!open) {
-      setShowMenu(false);
       setShowEmojiPicker(false);
     }
   }, [open]);
@@ -2613,63 +2610,12 @@ function SupportWidget({
 
   return (
     <aside
-      className={`support-widget ${open ? "open" : ""} ${compactMode ? "compact" : ""} ${
+      className={`support-widget ${open ? "open" : ""} ${
         view === "home" ? "view-home" : "view-chat"
       }`}
       aria-label="Support widget"
     >
       <div className="widget-header">
-        <div className="widget-actions widget-actions-menu">
-          <button
-            className="widget-icon"
-            type="button"
-            onClick={() => setShowMenu((current) => !current)}
-            aria-label="Widget actions"
-          >
-            ⋮
-          </button>
-          {view !== "home" ? (
-            <button
-              className="widget-icon"
-              type="button"
-              onClick={() => setCompactMode((current) => !current)}
-              aria-label="Toggle compact mode"
-            >
-              ↕
-            </button>
-          ) : null}
-          {showMenu ? (
-            <div className="widget-menu">
-              <button
-                type="button"
-                onClick={() => {
-                  onSetView("home");
-                  setShowMenu(false);
-                }}
-              >
-                {text.menuHome}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onResetConversation();
-                  setShowMenu(false);
-                }}
-              >
-                {text.menuNewChat}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  setShowMenu(false);
-                }}
-              >
-                {text.menuClose}
-              </button>
-            </div>
-          ) : null}
-        </div>
         <div className="widget-brand">
           <div className="widget-brand-avatar">LA</div>
           <div className="widget-brand-copy">
@@ -2687,7 +2633,7 @@ function SupportWidget({
 
       {view === "home" ? (
         <div className="widget-home">
-          {!customerProfile.submitted ? supportOverview : null}
+          {customerProfile.submitted ? leadCaptureSection : supportOverview}
           {!customerProfile.submitted ? leadCaptureSection : null}
 
           <section className="widget-home-hero">
@@ -2706,7 +2652,6 @@ function SupportWidget({
           </section>
 
           {customerProfile.submitted ? supportOverview : null}
-          {customerProfile.submitted ? leadCaptureSection : null}
 
           <section className="widget-home-section">
             <div className="widget-section-heading">
