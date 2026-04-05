@@ -258,7 +258,22 @@ export function getProductById(id) {
   return products.find((product) => product.id === id) ?? null;
 }
 
-export function isOrderEligibleForReturn(order, locale = "en") {
+function normalizeReferenceDate(nowInput) {
+  const candidate =
+    nowInput instanceof Date
+      ? nowInput
+      : nowInput != null
+        ? new Date(nowInput)
+        : new Date();
+
+  if (Number.isNaN(candidate.getTime())) {
+    return new Date();
+  }
+
+  return new Date(candidate.toISOString().slice(0, 10));
+}
+
+export function isOrderEligibleForReturn(order, locale = "en", nowInput = null) {
   if (!order?.deliveryDate) {
     return {
       eligible: false,
@@ -270,7 +285,7 @@ export function isOrderEligibleForReturn(order, locale = "en") {
   }
 
   const deliveredAt = new Date(order.deliveryDate);
-  const now = new Date("2026-03-15");
+  const now = normalizeReferenceDate(nowInput);
   const diffDays = Math.floor((now - deliveredAt) / (1000 * 60 * 60 * 24));
 
   if (diffDays > storePolicies.returns.windowDays) {

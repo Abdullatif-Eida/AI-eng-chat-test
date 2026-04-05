@@ -5,6 +5,7 @@ import {
   tokenizeText
 } from "./dataProtection.js";
 import { createSupportAgent } from "./aiProvider.js";
+import { createCommerceProviderFromEnv } from "./commerceProvider.js";
 import {
   clearSessionRetentionStore,
   createSessionRetentionStore
@@ -416,6 +417,9 @@ export function createChatbot({
   sessionTtlMs = SESSION_TTL_MS,
   messageCooldownMs = 0
 } = {}) {
+  const resolvedCommerceProvider = commerceProvider ?? createCommerceProviderFromEnv(process.env, {
+    nowDate: () => new Date(now())
+  });
   const sessions = new Map();
   const analytics = [];
   const agent = createSupportAgent({
@@ -565,7 +569,7 @@ export function createChatbot({
         cacheStore: session.cacheStore,
         idempotencyStore: session.idempotencyStore,
         openrouterApiKey,
-        commerceProvider
+        commerceProvider: resolvedCommerceProvider
       });
 
       session.history.push(

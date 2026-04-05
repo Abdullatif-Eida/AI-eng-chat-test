@@ -165,7 +165,7 @@ function buildProductSummary(product, locale = "en") {
   };
 }
 
-export function createSeededCommerceProvider() {
+export function createSeededCommerceProvider({ nowDate = () => new Date() } = {}) {
   function listVisibleOrders({ customer, knownOrders }) {
     const localOrders = getTrustedKnownOrders(knownOrders, customer).map(enrichOrder);
     const providerOrders = seededOrders
@@ -280,7 +280,7 @@ export function createSeededCommerceProvider() {
     },
 
     getReturnAssessment({ order, locale }) {
-      return isOrderEligibleForReturn(order, locale);
+      return isOrderEligibleForReturn(order, locale, nowDate());
     },
 
     getCancellationAssessment({ order, locale }) {
@@ -349,9 +349,10 @@ export function createHttpCommerceProvider({
   profilePath = "/customers/profile?email={email}",
   ordersPath = "/orders?email={email}",
   orderPath = "/orders/{orderNumber}",
+  nowDate = () => new Date(),
   fetchImpl = fetch
 }) {
-  const seeded = createSeededCommerceProvider();
+  const seeded = createSeededCommerceProvider({ nowDate });
 
   async function requestJson(pathTemplate, variables) {
     const url = joinUrl(baseUrl, fillTemplate(pathTemplate, variables));
@@ -463,11 +464,11 @@ export function createHttpCommerceProvider({
   };
 }
 
-export function createCommerceProviderFromEnv(env = process.env) {
+export function createCommerceProviderFromEnv(env = process.env, options = {}) {
   const baseUrl = env.COMMERCE_API_BASE_URL;
 
   if (!baseUrl) {
-    return createSeededCommerceProvider();
+    return createSeededCommerceProvider(options);
   }
 
   return createHttpCommerceProvider({
@@ -476,6 +477,7 @@ export function createCommerceProviderFromEnv(env = process.env) {
     headers: parseJsonEnv(env.COMMERCE_API_HEADERS_JSON),
     profilePath: env.COMMERCE_CUSTOMER_PROFILE_PATH || "/customers/profile?email={email}",
     ordersPath: env.COMMERCE_CUSTOMER_ORDERS_PATH || "/orders?email={email}",
-    orderPath: env.COMMERCE_ORDER_DETAILS_PATH || "/orders/{orderNumber}"
+    orderPath: env.COMMERCE_ORDER_DETAILS_PATH || "/orders/{orderNumber}",
+    ...options
   });
 }

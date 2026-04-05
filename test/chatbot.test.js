@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createChatbot } from "../src/lib/chatbot.js";
 import { createOrder } from "../src/data/orders.js";
+import { isOrderEligibleForReturn } from "../src/lib/commerce.js";
 import {
   createDataProtectionBoundary,
   detokenizeText,
@@ -995,7 +996,9 @@ test("scopes cache to the authenticated shopper so order data does not bleed acr
 
 test("checks return eligibility through OpenRouter-routed tools", async () => {
   await withMockedOpenRouter(async () => {
-    const bot = createChatbot();
+    const bot = createChatbot({
+      now: () => new Date("2026-03-15T12:00:00Z").getTime()
+    });
     const result = await bot.chat({
       sessionId: "returns-flow",
       message: "I need a refund for KS-10388",
@@ -1008,6 +1011,29 @@ test("checks return eligibility through OpenRouter-routed tools", async () => {
     assert.equal(result.intent, "returns_refunds");
     assert.match(result.reply, /eligible for a return request|within 3 days|Refunds/i);
   });
+});
+
+test("calculates return eligibility from the current date instead of a hardcoded reference", () => {
+  const eligible = isOrderEligibleForReturn(
+    {
+      orderNumber: "KS-10388",
+      deliveryDate: "2026-03-14"
+    },
+    "en",
+    "2026-03-15T12:00:00Z"
+  );
+  const expired = isOrderEligibleForReturn(
+    {
+      orderNumber: "KS-10388",
+      deliveryDate: "2026-03-14"
+    },
+    "en",
+    "2026-04-05T12:00:00Z"
+  );
+
+  assert.equal(eligible.eligible, true);
+  assert.equal(expired.eligible, false);
+  assert.match(expired.reason, /outside the 3-day return window/i);
 });
 
 test("checks cancellation against live order state through tools", async () => {
