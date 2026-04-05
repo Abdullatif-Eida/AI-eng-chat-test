@@ -161,6 +161,27 @@ function buildStructuredReply({
   };
 }
 
+function createStructuredAssistantResponse(structured) {
+  const reply = JSON.stringify(structured);
+
+  return createJsonResponse({
+    id: "resp_structured",
+    output_text: reply,
+    output: [
+      {
+        type: "message",
+        role: "assistant",
+        content: [
+          {
+            type: "output_text",
+            text: reply
+          }
+        ]
+      }
+    ]
+  });
+}
+
 function planToolCall(input = []) {
   const message = extractUserMessage(input);
   const normalized = message.toLowerCase();
@@ -719,6 +740,45 @@ test("sends a model-driven DeepSeek request profile for simple turns", async () 
   assert.match(firstBody.user, /^support_[a-f0-9]{24}$/);
   assert.match(firstBody.instructions, /Trusted storefront knowledge available on every turn/i);
   assert.match(firstBody.instructions, /Current session support context/i);
+});
+
+test("keeps short order follow-ups on the lighter request profile even when visible orders are attached", async () => {
+  const bodies = [];
+
+  await withMockedOpenRouter(async () => {
+    const bot = createChatbot();
+    await bot.chat({
+      sessionId: "short-order-followup-profile",
+      message: "Track KS-10540",
+      customerProfile: {
+        email: "abdul@example.com"
+      },
+      knownOrders: [
+        {
+          orderNumber: "KS-10541",
+          status: "Processing",
+          paymentStatus: "Paid"
+        },
+        {
+          orderNumber: "KS-10540",
+          status: "Out for delivery",
+          paymentStatus: "Paid"
+        }
+      ],
+      conversationHistory: [
+        {
+          role: "assistant",
+          content: "Which order do you want me to track?"
+        }
+      ]
+    });
+  }, createCapturingOpenRouterFetch(bodies));
+
+  const firstBody = bodies[0];
+  assert.equal(firstBody.model, "deepseek/deepseek-v3.2");
+  assert.equal(firstBody.max_output_tokens, 800);
+  assert.equal(firstBody.temperature, 0.2);
+  assert.equal(firstBody.reasoning?.enabled, false);
 });
 
 test("keeps tool selection model-driven even for sensitive profile and order turns", async () => {
@@ -1906,6 +1966,119 @@ test("retries with relaxed provider routing when OpenRouter cannot satisfy stric
     assert.equal(requestedBodies[1].provider, undefined);
     assert.equal(requestedBodies[1].reasoning, undefined);
     assert.ok(bot.getAnalytics().some((event) => event.type === "provider_routing_retry"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("retries transient OpenRouter failures before surfacing a temporary fallback", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  let attempts = 0;
+  global.fetch = async () => {
+    attempts += 1;
+
+    if (attempts === 1) {
+      return createJsonResponse({
+        error: {
+          message: "Upstream provider temporarily unavailable."
+        }
+      }, 503);
+    }
+
+    return createStructuredAssistantResponse(
+      buildStructuredReply({
+        intent: "policy_info",
+        reply: "Returns are accepted within 14 days.",
+        confidence: 0.93
+      })
+    );
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "transient-retry-success",
+      message: "How do returns work?"
+    });
+
+    assert.equal(result.structured?.resolution, "answered");
+    assert.match(result.reply, /14 days/i);
+    assert.equal(attempts, 2);
+    assert.ok(bot.getAnalytics().some((event) => event.type === "provider_transient_retry"));
+    assert.ok(!bot.getAnalytics().some((event) => event.type === "agent_fallback"));
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = previousKey;
+    }
+
+    global.fetch = previousFetch;
+  }
+});
+
+test("retries a blank final provider response after tool execution", async () => {
+  const previousKey = process.env.OPENROUTER_API_KEY;
+  const previousFetch = global.fetch;
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  let attempts = 0;
+  global.fetch = async () => {
+    attempts += 1;
+
+    if (attempts === 1) {
+      return createJsonResponse({
+        id: "resp_call",
+        output: [
+          {
+            type: "function_call",
+            name: "get_policy_information",
+            call_id: "call_policy",
+            arguments: JSON.stringify({
+              topic: "returns",
+              question: "How do returns work?"
+            })
+          }
+        ]
+      });
+    }
+
+    if (attempts === 2) {
+      return createJsonResponse({
+        id: "resp_blank",
+        output: []
+      });
+    }
+
+    return createStructuredAssistantResponse(
+      buildStructuredReply({
+        intent: "policy_info",
+        reply: "Returns are accepted within 14 days.",
+        confidence: 0.91
+      })
+    );
+  };
+
+  try {
+    const bot = createChatbot();
+    const result = await bot.chat({
+      sessionId: "blank-final-response-retry",
+      message: "How do returns work?"
+    });
+
+    assert.equal(result.structured?.resolution, "answered");
+    assert.match(result.reply, /14 days/i);
+    assert.equal(attempts, 3);
+    assert.ok(bot.getAnalytics().some((event) => event.type === "provider_empty_response_retry"));
   } finally {
     if (previousKey === undefined) {
       delete process.env.OPENROUTER_API_KEY;

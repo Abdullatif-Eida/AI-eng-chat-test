@@ -1906,15 +1906,16 @@ html[dir="rtl"] .cart-list {
 }
 
 .widget-toolbar-button {
-  min-height: 34px;
-  padding: 0 12px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.14);
   color: #eff7fb;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
   font-size: 0.74rem;
   font-weight: 700;
   backdrop-filter: blur(10px);
@@ -1924,6 +1925,10 @@ html[dir="rtl"] .cart-list {
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
+}
+
+.widget-toolbar-button span {
+  display: none;
 }
 
 .widget-toolbar-button.active {
@@ -3091,16 +3096,6 @@ html[dir="rtl"] .product-price-card strong {
 
   .widget-header-badge {
     display: none;
-  }
-
-  .widget-toolbar-button span {
-    display: none;
-  }
-
-  .widget-toolbar-button {
-    width: 34px;
-    padding: 0;
-    justify-content: center;
   }
 
   .product-detail-media {

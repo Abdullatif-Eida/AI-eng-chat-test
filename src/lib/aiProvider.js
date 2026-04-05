@@ -27,14 +27,39 @@ const OPENROUTER_TIMEOUT_MS = Number(
   process.env.NETLIFY_OPENROUTER_TIMEOUT_MS ||
   20000
 );
+const OPENROUTER_MAX_TRANSIENT_RETRIES = Math.max(
+  0,
+  Number(
+    process.env.OPENROUTER_MAX_TRANSIENT_RETRIES ||
+    process.env.NETLIFY_OPENROUTER_MAX_TRANSIENT_RETRIES ||
+    2
+  )
+);
+const OPENROUTER_RETRY_BASE_DELAY_MS = Math.max(
+  0,
+  Number(
+    process.env.OPENROUTER_RETRY_BASE_DELAY_MS ||
+    process.env.NETLIFY_OPENROUTER_RETRY_BASE_DELAY_MS ||
+    250
+  )
+);
+const OPENROUTER_MAX_EMPTY_RESPONSE_RETRIES = Math.max(
+  0,
+  Number(
+    process.env.OPENROUTER_MAX_EMPTY_RESPONSE_RETRIES ||
+    process.env.NETLIFY_OPENROUTER_MAX_EMPTY_RESPONSE_RETRIES ||
+    1
+  )
+);
 const MAX_TOOL_STEPS = 6;
 
 class OpenRouterRequestError extends Error {
-  constructor(message, { status = null, responseText = "" } = {}) {
+  constructor(message, { status = null, responseText = "", durationMs = null } = {}) {
     super(message);
     this.name = "OpenRouterRequestError";
     this.status = status;
     this.responseText = responseText;
+    this.durationMs = Number.isFinite(durationMs) ? durationMs : null;
   }
 }
 
@@ -100,6 +125,7 @@ async function requestOpenRouter({
   apiKey,
   body
 }) {
+  const startedAt = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
   let response;
@@ -116,7 +142,8 @@ async function requestOpenRouter({
       throw new OpenRouterRequestError(
         `OpenRouter request timed out after ${OPENROUTER_TIMEOUT_MS}ms.`,
         {
-          status: 408
+          status: 408,
+          durationMs: Date.now() - startedAt
         }
       );
     }
@@ -132,7 +159,8 @@ async function requestOpenRouter({
       `OpenRouter request failed with ${response.status}: ${extractProviderErrorText(text).slice(0, 400)}`,
       {
         status: response.status,
-        responseText: text
+        responseText: text,
+        durationMs: Date.now() - startedAt
       }
     );
   }
@@ -237,6 +265,47 @@ function shouldRetryWithRelaxedRouting(error) {
   ].some((needle) => haystack.includes(needle));
 }
 
+function shouldRetryTransientFailure(error) {
+  if (error instanceof OpenRouterRequestError) {
+    if ([429, 500, 502, 503, 504].includes(error.status)) {
+      return true;
+    }
+
+    const haystack = `${error.message}\n${error.responseText}`.toLowerCase();
+    return [
+      "temporarily unavailable",
+      "upstream",
+      "overloaded",
+      "capacity",
+      "connection reset",
+      "socket hang up",
+      "fetch failed"
+    ].some((needle) => haystack.includes(needle));
+  }
+
+  const message = String(error?.message ?? "").toLowerCase();
+  return [
+    "fetch failed",
+    "socket hang up",
+    "econnreset",
+    "network",
+    "connection reset"
+  ].some((needle) => message.includes(needle));
+}
+
+function getTransientRetryDelayMs(retryCount) {
+  const safeRetryCount = Math.max(1, Number(retryCount) || 1);
+  return Math.min(1500, OPENROUTER_RETRY_BASE_DELAY_MS * (2 ** (safeRetryCount - 1)));
+}
+
+function wait(ms) {
+  if (ms <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function requestAgentTurn({
   apiKey,
   model,
@@ -251,7 +320,8 @@ async function requestAgentTurn({
   const attempts = [
     {
       useStructuredOutput: true,
-      relaxedRouting: false
+      relaxedRouting: false,
+      transientRetryCount: 0
     }
   ];
   const attempted = new Set();
@@ -259,7 +329,7 @@ async function requestAgentTurn({
 
   while (attempts.length > 0) {
     const attempt = attempts.shift();
-    const attemptKey = `${attempt.useStructuredOutput ? "schema" : "plain"}:${attempt.relaxedRouting ? "relaxed" : "strict"}`;
+    const attemptKey = `${attempt.useStructuredOutput ? "schema" : "plain"}:${attempt.relaxedRouting ? "relaxed" : "strict"}:${attempt.transientRetryCount ?? 0}`;
 
     if (attempted.has(attemptKey)) {
       continue;
@@ -293,13 +363,15 @@ async function requestAgentTurn({
 
         attempts.unshift({
           useStructuredOutput: attempt.useStructuredOutput,
-          relaxedRouting: true
+          relaxedRouting: true,
+          transientRetryCount: 0
         });
 
         if (attempt.useStructuredOutput) {
           attempts.push({
             useStructuredOutput: false,
-            relaxedRouting: true
+            relaxedRouting: true,
+            transientRetryCount: 0
           });
         }
 
@@ -317,7 +389,35 @@ async function requestAgentTurn({
 
         attempts.unshift({
           useStructuredOutput: false,
-          relaxedRouting: attempt.relaxedRouting
+          relaxedRouting: attempt.relaxedRouting,
+          transientRetryCount: 0
+        });
+        continue;
+      }
+
+      if (
+        shouldRetryTransientFailure(error) &&
+        (attempt.transientRetryCount ?? 0) < OPENROUTER_MAX_TRANSIENT_RETRIES
+      ) {
+        const retryCount = (attempt.transientRetryCount ?? 0) + 1;
+        const delayMs = getTransientRetryDelayMs(retryCount);
+
+        track({
+          type: "provider_transient_retry",
+          sessionId,
+          locale,
+          provider: "openrouter",
+          retryCount,
+          delayMs,
+          status: error instanceof OpenRouterRequestError ? error.status : null,
+          durationMs: error instanceof OpenRouterRequestError ? error.durationMs : null,
+          reason: error instanceof Error ? error.message : "Unknown transient OpenRouter failure"
+        });
+
+        await wait(delayMs);
+        attempts.unshift({
+          ...attempt,
+          transientRetryCount: retryCount
         });
         continue;
       }
@@ -451,6 +551,18 @@ function buildStableOpenRouterUser(sessionId, customer) {
   return `support_${createHash("sha256").update(stableIdentity).digest("hex").slice(0, 24)}`;
 }
 
+function isShortSupportFollowUp(message = "") {
+  const trimmed = String(message ?? "").trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  const lineCount = trimmed.split("\n").length;
+
+  return trimmed.length <= 40 && wordCount <= 6 && lineCount === 1;
+}
+
 function buildRequestOptions({
   model,
   message = "",
@@ -460,11 +572,14 @@ function buildRequestOptions({
   sessionId
 }) {
   const trimmed = String(message).trim();
+  const visibleOrderCount = Array.isArray(knownOrders) ? knownOrders.length : 0;
+  const shortFollowUp = isShortSupportFollowUp(trimmed);
   const complexTurn =
     trimmed.length >= 220 ||
     history.length >= 6 ||
     (hasVerifiedCustomerIdentity(customer) && trimmed.length >= 140) ||
-    (Array.isArray(knownOrders) && knownOrders.length > 0);
+    visibleOrderCount >= 5 ||
+    (!shortFollowUp && visibleOrderCount >= 2 && trimmed.length >= 80);
   const providerDataCollection =
     String(
       process.env.OPENROUTER_DATA_COLLECTION ??
@@ -706,6 +821,7 @@ export function createSupportAgent({ track = () => {} } = {}) {
     const toolTrace = [];
     let model = selectedModel;
     let conversationInput = buildConversationInput(history, message, sharingBoundary);
+    let emptyResponseRetryCount = 0;
 
     try {
       let payload = await requestAgentTurn({
@@ -732,6 +848,30 @@ export function createSupportAgent({ track = () => {} } = {}) {
           });
 
           if (!normalized) {
+            if (emptyResponseRetryCount < OPENROUTER_MAX_EMPTY_RESPONSE_RETRIES) {
+              emptyResponseRetryCount += 1;
+              track({
+                type: "provider_empty_response_retry",
+                sessionId,
+                locale,
+                provider: "openrouter",
+                retryCount: emptyResponseRetryCount,
+                toolCount: toolTrace.length
+              });
+              payload = await requestAgentTurn({
+                apiKey,
+                model,
+                instructions,
+                input: conversationInput,
+                tools: toolbox.tools,
+                requestOptions,
+                track,
+                sessionId,
+                locale
+              });
+              continue;
+            }
+
             throw new Error("OpenRouter returned no text response.");
           }
 
@@ -801,6 +941,8 @@ export function createSupportAgent({ track = () => {} } = {}) {
         sessionId,
         locale,
         provider: "openrouter",
+        status: error instanceof OpenRouterRequestError ? error.status : null,
+        durationMs: error instanceof OpenRouterRequestError ? error.durationMs : null,
         reason: error instanceof Error ? error.message : "Unknown OpenRouter failure"
       });
 
