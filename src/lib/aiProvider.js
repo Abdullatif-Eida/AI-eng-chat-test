@@ -18,6 +18,7 @@ import {
   normalizeStructuredReply,
   selectSupportModel
 } from "./supportBrain.js";
+import { localizeOrderSnapshot } from "./orderLocalization.js";
 
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/responses";
@@ -628,8 +629,8 @@ function buildRequestOptions({
 
 function summarizeCatalog(locale = "en") {
   return products.map((product) => {
-    const name = locale === "ar" ? `${product.nameAr} (${product.name})` : `${product.name} (${product.nameAr})`;
-    const category = locale === "ar" ? `${product.categoryAr} (${product.category})` : `${product.category} (${product.categoryAr})`;
+    const name = locale === "ar" ? product.nameAr : product.name;
+    const category = locale === "ar" ? product.categoryAr : product.category;
     const highlights = locale === "ar" ? product.highlightsAr : product.highlights;
 
     return locale === "ar"
@@ -643,8 +644,8 @@ function buildStorefrontContext(locale = "en") {
     new Set(
       products.map((product) =>
         locale === "ar"
-          ? `${product.categoryAr} (${product.category})`
-          : `${product.category} (${product.categoryAr})`
+          ? product.categoryAr
+          : product.category
       )
     )
   );
@@ -700,7 +701,7 @@ function buildSessionContext({
   ].filter(Boolean);
   const visibleOrderCount = Array.isArray(knownOrders) ? knownOrders.length : 0;
   const latestKnownOrder = Array.isArray(knownOrders) && knownOrders.length > 0
-    ? knownOrders[0]
+    ? localizeOrderSnapshot(knownOrders[0], locale)
     : null;
 
   if (locale === "ar") {

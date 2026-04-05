@@ -1186,6 +1186,8 @@ test("keeps Arabic replies when the shopper writes in Arabic", async () => {
     assert.equal(result.locale, "ar");
     assert.equal(result.intent, "order_tracking");
     assert.match(result.reply, /طلبك KS-10388|شركة الشحن|الموعد المتوقع/);
+    assert.doesNotMatch(result.reply, /Out for delivery|Paid|Pending assignment|Expected to ship tomorrow/);
+    assert.match(result.reply, /تم التسليم|مدفوع/);
   });
 });
 
@@ -1222,6 +1224,7 @@ test("builds English model instructions for English shopper turns on an Arabic s
   assert.ok(firstBody);
   assert.match(firstBody.instructions, /Trusted storefront knowledge available on every turn/i);
   assert.doesNotMatch(firstBody.instructions, /معلومات المتجر الموثوقة المتاحة لك في كل محادثة|كتالوج المنتجات المتاح/);
+  assert.doesNotMatch(firstBody.instructions, /Mechanical Keyboard \(لوحة مفاتيح ميكانيكية\)|Accessories \(إكسسوارات\)|Smart Home \(منزل ذكي\)/);
 });
 
 test("switches back to English when a shopper follows an Arabic turn with an English message", async () => {

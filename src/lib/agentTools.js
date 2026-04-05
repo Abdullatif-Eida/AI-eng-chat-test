@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createSeededCommerceProvider } from "./commerceProvider.js";
+import { localizeOrderSnapshot } from "./orderLocalization.js";
 import {
   createSessionRetentionStore,
   readSessionRetentionValue,
@@ -133,14 +134,15 @@ async function withCache(cache, { scope, key, ttlMs, loader }) {
 }
 
 function buildOrderSummary(order, locale = "en", commerceProvider) {
+  const localizedOrder = localizeOrderSnapshot(order, locale);
   const items = commerceProvider.getLocalizedOrderItems(order, locale);
 
   return {
     orderNumber: order.orderNumber,
-    status: order.status,
-    eta: order.eta,
-    paymentStatus: order.paymentStatus,
-    courier: order.courier,
+    status: localizedOrder.status,
+    eta: localizedOrder.eta,
+    paymentStatus: localizedOrder.paymentStatus,
+    courier: localizedOrder.courier,
     deliveryDate: order.deliveryDate,
     totalSar: order.totalSar,
     items
@@ -424,7 +426,7 @@ export function createCommerceToolbox({
           const excludeProductIds = Array.isArray(rawArgs.excludeProductIds)
             ? rawArgs.excludeProductIds.map((value) => String(value))
             : [];
-          const cacheKey = `catalog:${mode}:${hashValue(query)}:${hashValue(excludeProductIds.join("|"))}`;
+          const cacheKey = `catalog:${locale}:${mode}:${hashValue(query)}:${hashValue(excludeProductIds.join("|"))}`;
           const { value, cache: cacheStatus } = await withCache(cache, {
             scope: "public",
             key: cacheKey,
@@ -442,7 +444,7 @@ export function createCommerceToolbox({
       case "get_policy_information":
         return runTool(name, rawArgs, async () => {
           const { topic, question } = rawArgs;
-          const cacheKey = `policy:${topic}:${hashValue(question)}`;
+          const cacheKey = `policy:${locale}:${topic}:${hashValue(question)}`;
           const { value, cache: cacheStatus } = await withCache(cache, {
             scope: "public",
             key: cacheKey,
@@ -466,7 +468,7 @@ export function createCommerceToolbox({
 
           const { value, cache: cacheStatus } = await withCache(cache, {
             scope: customerScope,
-            key: "visible-orders",
+            key: `visible-orders:${locale}`,
             ttlMs: 30 * 1000,
             loader: () => visibleOrders.map((order) => buildOrderSummary(order, locale, commerceProvider))
           });
@@ -493,7 +495,7 @@ export function createCommerceToolbox({
 
           const { value, cache: cacheStatus } = await withCache(cache, {
             scope: customerScope,
-            key: `order:${normalizedOrder}`,
+            key: `order:${locale}:${normalizedOrder}`,
             ttlMs: 30 * 1000,
             loader: async () => {
               const order = await commerceProvider.getOrder({

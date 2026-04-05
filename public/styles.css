@@ -2462,6 +2462,7 @@ html[dir="rtl"] .cart-list {
   padding: 14px 14px 10px;
   border-radius: 22px;
   box-shadow: 0 14px 30px rgba(20, 55, 87, 0.1);
+  text-align: start;
 }
 
 .message-bubble p {
@@ -2470,6 +2471,25 @@ html[dir="rtl"] .cart-list {
   font-size: 0.9rem;
   text-align: start;
   white-space: pre-line;
+  unicode-bidi: plaintext;
+}
+
+.message-bubble.message-rtl {
+  direction: rtl;
+  text-align: right;
+}
+
+.message-bubble.message-ltr {
+  direction: ltr;
+  text-align: left;
+}
+
+.message-bubble.message-rtl p {
+  text-align: right;
+}
+
+.message-bubble.message-ltr p {
+  text-align: left;
 }
 
 .message-actions {
@@ -2898,10 +2918,13 @@ html[dir="rtl"] .widget-composer input {
 
 html[dir="rtl"] .message-meta {
   direction: ltr;
-  justify-content: flex-start;
 }
 
-html[dir="rtl"] .message-row.user .message-meta {
+html[dir="rtl"] .message-bubble.message-rtl .message-actions {
+  justify-content: flex-end;
+}
+
+html[dir="rtl"] .message-bubble.message-rtl .message-meta {
   justify-content: flex-end;
 }
 

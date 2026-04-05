@@ -22205,6 +22205,59 @@ var products = [
   }
 ];
 
+// src/lib/orderLocalization.js
+var ORDER_STATUS_MAP = {
+  en: {
+    "Out for delivery": "Out for delivery",
+    Delivered: "Delivered",
+    Shipped: "Shipped",
+    Processing: "Processing",
+    Paid: "Paid",
+    "Cash on delivery": "Cash on delivery",
+    "Pending assignment": "Pending assignment"
+  },
+  ar: {
+    "Out for delivery": "\u062E\u0631\u062C \u0644\u0644\u062A\u0633\u0644\u064A\u0645",
+    Delivered: "\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645",
+    Shipped: "\u062A\u0645 \u0627\u0644\u0634\u062D\u0646",
+    Processing: "\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629",
+    Paid: "\u0645\u062F\u0641\u0648\u0639",
+    "Cash on delivery": "\u0627\u0644\u062F\u0641\u0639 \u0639\u0646\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645",
+    "Pending assignment": "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0634\u0631\u0643\u0629 \u0627\u0644\u0634\u062D\u0646"
+  }
+};
+function localizeOrderStatus(locale = "en", value = "") {
+  return ORDER_STATUS_MAP[locale]?.[value] ?? value;
+}
+function localizeOrderPaymentStatus(locale = "en", value = "") {
+  return ORDER_STATUS_MAP[locale]?.[value] ?? value;
+}
+function localizeOrderCourier(locale = "en", value = "") {
+  if (locale !== "ar") {
+    return value;
+  }
+  return value === "Pending assignment" ? "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0634\u0631\u0643\u0629 \u0627\u0644\u0634\u062D\u0646" : value;
+}
+function localizeOrderEta(locale = "en", value = "") {
+  const eta = String(value ?? "");
+  if (locale !== "ar") {
+    return eta;
+  }
+  if (eta === "Today before 8:00 PM") {
+    return "\u0627\u0644\u064A\u0648\u0645 \u0642\u0628\u0644 \u0627\u0644\u0633\u0627\u0639\u0629 8:00 \u0645\u0633\u0627\u0621\u064B";
+  }
+  if (eta.startsWith("Delivered on ")) {
+    return `\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645 \u0641\u064A ${eta.replace("Delivered on ", "")}`;
+  }
+  if (eta === "Expected in 2 days") {
+    return "\u0645\u062A\u0648\u0642\u0639 \u062E\u0644\u0627\u0644 \u064A\u0648\u0645\u064A\u0646";
+  }
+  if (eta === "Expected to ship tomorrow") {
+    return "\u0645\u062A\u0648\u0642\u0639 \u0634\u062D\u0646\u0647 \u063A\u062F\u0627\u064B";
+  }
+  return eta;
+}
+
 // src/client/main.jsx
 var import_jsx_runtime = __toESM(require_jsx_runtime(), 1);
 function fillTemplate(template, values) {
@@ -22644,26 +22697,6 @@ var categoryIconMap = {
   "Smart Home": "\u{1F3E0}",
   "Personal Care": "\u{1FAA5}"
 };
-var orderStatusMap = {
-  en: {
-    "Out for delivery": "Out for delivery",
-    Delivered: "Delivered",
-    Shipped: "Shipped",
-    Processing: "Processing",
-    Paid: "Paid",
-    "Cash on delivery": "Cash on delivery",
-    "Pending assignment": "Pending assignment"
-  },
-  ar: {
-    "Out for delivery": "\u062E\u0631\u062C \u0644\u0644\u062A\u0633\u0644\u064A\u0645",
-    Delivered: "\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645",
-    Shipped: "\u062A\u0645 \u0627\u0644\u0634\u062D\u0646",
-    Processing: "\u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629",
-    Paid: "\u0645\u062F\u0641\u0648\u0639",
-    "Cash on delivery": "\u0627\u0644\u062F\u0641\u0639 \u0639\u0646\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645",
-    "Pending assignment": "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u062A\u0639\u064A\u064A\u0646"
-  }
-};
 var STORAGE_KEYS = {
   cart: "lean-souq-session-cart",
   orders: "lean-souq-session-orders",
@@ -22893,10 +22926,10 @@ function localizeOrder(order, locale) {
   return {
     ...order,
     items,
-    displayStatus: orderStatusMap[locale][order.status] ?? order.status,
-    displayPaymentStatus: orderStatusMap[locale][order.paymentStatus] ?? order.paymentStatus,
-    displayCourier: locale === "ar" && order.courier === "Pending assignment" ? "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0634\u0631\u0643\u0629 \u0627\u0644\u0634\u062D\u0646" : order.courier,
-    displayEta: locale === "ar" ? order.eta === "Today before 8:00 PM" ? "\u0627\u0644\u064A\u0648\u0645 \u0642\u0628\u0644 8:00 \u0645\u0633\u0627\u0621\u064B" : order.eta.startsWith("Delivered on ") ? `\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645 \u0641\u064A ${order.eta.replace("Delivered on ", "")}` : order.eta === "Expected in 2 days" ? "\u0645\u062A\u0648\u0642\u0639 \u062E\u0644\u0627\u0644 \u064A\u0648\u0645\u064A\u0646" : order.eta === "Expected to ship tomorrow" ? "\u0645\u062A\u0648\u0642\u0639 \u0627\u0644\u0634\u062D\u0646 \u063A\u062F\u0627\u064B" : order.eta : order.eta,
+    displayStatus: localizeOrderStatus(locale, order.status),
+    displayPaymentStatus: localizeOrderPaymentStatus(locale, order.paymentStatus),
+    displayCourier: localizeOrderCourier(locale, order.courier),
+    displayEta: localizeOrderEta(locale, order.eta),
     displaySubtotal: formatCurrency(locale, order.subtotalSar ?? 0),
     displayTax: formatCurrency(locale, order.taxSar ?? 0),
     displayTotal: formatCurrency(locale, order.totalSar ?? 0)
@@ -22965,6 +22998,18 @@ function formatMessageTime(sentAt, locale) {
     minute: "2-digit",
     hour12: false
   }).format(new Date(sentAt));
+}
+function inferMessageDirection(text, locale) {
+  const value = String(text ?? "");
+  const arabicMatches = value.match(/[\u0600-\u06FF]/g) ?? [];
+  const latinMatches = value.match(/[A-Za-z]/g) ?? [];
+  if (locale === "ar" && arabicMatches.length > 0) {
+    return "rtl";
+  }
+  if (arabicMatches.length === 0 && latinMatches.length === 0) {
+    return locale === "ar" ? "rtl" : "ltr";
+  }
+  return arabicMatches.length > latinMatches.length ? "rtl" : "ltr";
 }
 function App() {
   const [siteLocale, setSiteLocale] = (0, import_react.useState)(() => readStorage(STORAGE_KEYS.locale, "en"));
@@ -24488,20 +24533,30 @@ function SupportWidget({
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "prompt-row", children: guidedPrompts.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "message-list", children: [
-              messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: `message-bubble ${message.role} ${message.kind === "error" ? "message-error" : ""}`, dir: "auto", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
-                message.retryable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "button",
+              messages.map((message) => {
+                const messageDirection = inferMessageDirection(message.text, locale);
+                return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: `message-row ${message.role}`, children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+                  "div",
                   {
-                    type: "button",
-                    className: "message-retry",
-                    onClick: () => onRetryMessage(message.retryText),
-                    disabled: loading || cooldownRemainingMs > 0,
-                    children: text.retry
+                    className: `message-bubble ${message.role} message-${messageDirection} ${message.kind === "error" ? "message-error" : ""}`,
+                    dir: messageDirection,
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: message.text }),
+                      message.retryable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                        "button",
+                        {
+                          type: "button",
+                          className: "message-retry",
+                          onClick: () => onRetryMessage(message.retryText),
+                          disabled: loading || cooldownRemainingMs > 0,
+                          children: text.retry
+                        }
+                      ) }) : null,
+                      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-meta", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-time", children: formatMessageTime(message.sentAt, locale) }) })
+                    ]
                   }
-                ) }) : null,
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-meta", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "message-time", children: formatMessageTime(message.sentAt, locale) }) })
-              ] }) }, message.id)),
+                ) }, message.id);
+              }),
               loading ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("article", { className: "message-row bot typing-row", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "message-bubble bot typing-bubble", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "typing-dots", "aria-label": text.typing, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),
                 /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {}),

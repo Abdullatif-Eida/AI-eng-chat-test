@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { storePolicies } from "../data/policies.js";
 import { products } from "../data/products.js";
+import {
+  localizeOrderCourier,
+  localizeOrderEta,
+  localizeOrderPaymentStatus,
+  localizeOrderStatus
+} from "../lib/orderLocalization.js";
 
 function fillTemplate(template, values) {
   return Object.entries(values).reduce((result, [key, value]) => {
@@ -449,27 +455,6 @@ const categoryIconMap = {
   "Personal Care": "🪥"
 };
 
-const orderStatusMap = {
-  en: {
-    "Out for delivery": "Out for delivery",
-    Delivered: "Delivered",
-    Shipped: "Shipped",
-    Processing: "Processing",
-    Paid: "Paid",
-    "Cash on delivery": "Cash on delivery",
-    "Pending assignment": "Pending assignment"
-  },
-  ar: {
-    "Out for delivery": "خرج للتسليم",
-    Delivered: "تم التسليم",
-    Shipped: "تم الشحن",
-    Processing: "قيد المعالجة",
-    Paid: "مدفوع",
-    "Cash on delivery": "الدفع عند الاستلام",
-    "Pending assignment": "بانتظار التعيين"
-  }
-};
-
 const STORAGE_KEYS = {
   cart: "lean-souq-session-cart",
   orders: "lean-souq-session-orders",
@@ -753,22 +738,10 @@ function localizeOrder(order, locale) {
   return {
     ...order,
     items,
-    displayStatus: orderStatusMap[locale][order.status] ?? order.status,
-    displayPaymentStatus: orderStatusMap[locale][order.paymentStatus] ?? order.paymentStatus,
-    displayCourier:
-      locale === "ar" && order.courier === "Pending assignment" ? "بانتظار شركة الشحن" : order.courier,
-    displayEta:
-      locale === "ar"
-        ? order.eta === "Today before 8:00 PM"
-          ? "اليوم قبل 8:00 مساءً"
-          : order.eta.startsWith("Delivered on ")
-            ? `تم التسليم في ${order.eta.replace("Delivered on ", "")}`
-            : order.eta === "Expected in 2 days"
-              ? "متوقع خلال يومين"
-              : order.eta === "Expected to ship tomorrow"
-                ? "متوقع الشحن غداً"
-                : order.eta
-        : order.eta,
+    displayStatus: localizeOrderStatus(locale, order.status),
+    displayPaymentStatus: localizeOrderPaymentStatus(locale, order.paymentStatus),
+    displayCourier: localizeOrderCourier(locale, order.courier),
+    displayEta: localizeOrderEta(locale, order.eta),
     displaySubtotal: formatCurrency(locale, order.subtotalSar ?? 0),
     displayTax: formatCurrency(locale, order.taxSar ?? 0),
     displayTotal: formatCurrency(locale, order.totalSar ?? 0)
@@ -858,6 +831,22 @@ function formatMessageTime(sentAt, locale) {
     minute: "2-digit",
     hour12: false
   }).format(new Date(sentAt));
+}
+
+function inferMessageDirection(text, locale) {
+  const value = String(text ?? "");
+  const arabicMatches = value.match(/[\u0600-\u06FF]/g) ?? [];
+  const latinMatches = value.match(/[A-Za-z]/g) ?? [];
+
+  if (locale === "ar" && arabicMatches.length > 0) {
+    return "rtl";
+  }
+
+  if (arabicMatches.length === 0 && latinMatches.length === 0) {
+    return locale === "ar" ? "rtl" : "ltr";
+  }
+
+  return arabicMatches.length > latinMatches.length ? "rtl" : "ltr";
 }
 
 function App() {
@@ -2767,28 +2756,35 @@ function SupportWidget({
             </div>
 
             <div className="message-list">
-              {messages.map((message) => (
-                <article key={message.id} className={`message-row ${message.role}`}>
-                  <div className={`message-bubble ${message.role} ${message.kind === "error" ? "message-error" : ""}`} dir="auto">
-                    <p>{message.text}</p>
-                    {message.retryable ? (
-                      <div className="message-actions">
-                        <button
-                          type="button"
-                          className="message-retry"
-                          onClick={() => onRetryMessage(message.retryText)}
-                          disabled={loading || cooldownRemainingMs > 0}
-                        >
-                          {text.retry}
-                        </button>
+              {messages.map((message) => {
+                const messageDirection = inferMessageDirection(message.text, locale);
+
+                return (
+                  <article key={message.id} className={`message-row ${message.role}`}>
+                    <div
+                      className={`message-bubble ${message.role} message-${messageDirection} ${message.kind === "error" ? "message-error" : ""}`}
+                      dir={messageDirection}
+                    >
+                      <p>{message.text}</p>
+                      {message.retryable ? (
+                        <div className="message-actions">
+                          <button
+                            type="button"
+                            className="message-retry"
+                            onClick={() => onRetryMessage(message.retryText)}
+                            disabled={loading || cooldownRemainingMs > 0}
+                          >
+                            {text.retry}
+                          </button>
+                        </div>
+                      ) : null}
+                      <div className="message-meta">
+                        <span className="message-time">{formatMessageTime(message.sentAt, locale)}</span>
                       </div>
-                    ) : null}
-                    <div className="message-meta">
-                      <span className="message-time">{formatMessageTime(message.sentAt, locale)}</span>
                     </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
               {loading ? (
                 <article className="message-row bot typing-row">
                   <div className="message-bubble bot typing-bubble">

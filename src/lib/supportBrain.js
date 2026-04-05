@@ -116,6 +116,8 @@ export function buildSupportInstructions({
       "عندما يكون الجواب واضحاً، اختم بسؤال قصير واحد عن الخطوة التالية الأكثر فائدة بدلاً من رد جامد.",
       "استخدم لغة آخر رسالة كتبها العميل في هذه الجولة.",
       "لا تغيّر الرد إلى الإنجليزية فقط لأن واجهة المتجر أو الرسائل السابقة أو أسماء المنتجات تستخدم الإنجليزية.",
+      "عند ذكر الحالة أو الدفع أو الشحن أو الموعد المتوقع، عرب المصطلحات التشغيلية بالكامل، ويمكن إبقاء أسماء المنتجات أو الشركات كما هي.",
+      "عند الرد بالعربية استخدم أسماء المنتجات والفئات بالعربية فقط، وعند الرد بالإنجليزية استخدمها بالإنجليزية فقط ما لم يكن اسم العلامة التجارية يجب أن يبقى كما هو.",
       "أجب دائماً بالعربية الطبيعية.",
       storeContext,
       sessionContext,
@@ -141,10 +143,11 @@ export function buildSupportInstructions({
     "Use human handoff only for sensitive, blocked, low-confidence, or repeated-failure cases.",
     "When the answer is clear, close with one short next-best-action question instead of sounding robotic or abrupt.",
     "Use the language of the shopper's latest message for your reply.",
-    "Do not switch the reply language just because the storefront, earlier turns, or product names use another language.",
-    "Always respond in the shopper's language.",
-    storeContext,
-    sessionContext,
+      "Do not switch the reply language just because the storefront, earlier turns, or product names use another language.",
+      "When replying in English, keep product and category names in English only. When replying in Arabic, keep them in Arabic only unless a brand must stay as-is.",
+      "Always respond in the shopper's language.",
+      storeContext,
+      sessionContext,
     "Your final answer must be JSON only and must match the required schema exactly. Put the natural shopper-facing message in reply."
   ].filter(Boolean).join("\n\n");
 }

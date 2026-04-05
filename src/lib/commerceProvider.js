@@ -273,7 +273,9 @@ export function createSeededCommerceProvider() {
       return (order.items ?? []).map((item) => {
         const product = getProductById(item.productId);
         const name = locale === "ar" ? product?.nameAr ?? product?.name : product?.name ?? product?.nameAr;
-        return `${item.quantity}x ${name ?? item.productId}`;
+        return locale === "ar"
+          ? `${item.quantity} × ${name ?? item.productId}`
+          : `${item.quantity}x ${name ?? item.productId}`;
       });
     },
 
