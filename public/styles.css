@@ -1803,7 +1803,7 @@ html[dir="rtl"] .cart-list {
   background: linear-gradient(180deg, rgba(248, 251, 255, 0.96), rgba(255, 255, 255, 0.98));
   box-shadow: var(--widget-shadow);
   border: 1px solid rgba(202, 220, 234, 0.9);
-  overflow: visible;
+  overflow: hidden;
   z-index: 45;
   opacity: 0;
   pointer-events: none;
@@ -1832,6 +1832,11 @@ html[dir="rtl"] .cart-list {
   transform: translateY(0) scale(1);
 }
 
+.support-widget.expanded {
+  width: min(560px, calc(100vw - 28px));
+  height: min(820px, calc(100vh - 40px));
+}
+
 .support-widget.compact {
   height: min(560px, calc(100vh - 96px));
 }
@@ -1857,6 +1862,7 @@ html[dir="rtl"] .cart-list {
   position: relative;
   z-index: 8;
   overflow: visible;
+  border-radius: 28px 28px 0 0;
 }
 
 .widget-brand {
@@ -1891,11 +1897,67 @@ html[dir="rtl"] .cart-list {
   align-self: center;
   gap: 8px;
   justify-self: end;
+  position: relative;
 }
 
 .widget-close {
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.widget-toolbar-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.14);
+  color: #eff7fb;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.widget-toolbar-button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.widget-toolbar-button.active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.widget-header-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 46px;
+  min-width: 154px;
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(213, 227, 239, 0.95);
+  box-shadow: 0 18px 36px rgba(12, 41, 64, 0.16);
+  display: grid;
+  gap: 6px;
+  z-index: 10;
+}
+
+.widget-header-menu button {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 0;
+  background: #f6fbff;
+  color: #173149;
+  text-align: start;
+  font-weight: 700;
+}
+
+.widget-header-menu button:hover {
+  background: #edf6fd;
 }
 
 .widget-brand-avatar,
@@ -1976,7 +2038,7 @@ html[dir="rtl"] .cart-list {
   max-height: calc(100vh - 170px);
   padding: 14px;
   display: grid;
-  grid-template-rows: auto auto auto auto auto;
+  grid-auto-rows: min-content;
   align-content: start;
   gap: 12px;
   min-height: 0;
@@ -2009,6 +2071,10 @@ html[dir="rtl"] .cart-list {
 .lead-capture-card {
   display: grid;
   gap: 12px;
+}
+
+.lead-saved-card {
+  gap: 10px;
 }
 
 .lead-capture-card strong {
@@ -2104,6 +2170,10 @@ html[dir="rtl"] .cart-list {
     linear-gradient(180deg, #ffffff, #f7fbff);
 }
 
+.widget-home-hero.compact {
+  padding: 16px;
+}
+
 .widget-home-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -2143,6 +2213,17 @@ html[dir="rtl"] .cart-list {
   margin-top: 16px;
 }
 
+.widget-home-inline-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.prompt-chip.home {
+  min-height: 38px;
+}
+
 .widget-capability-pill {
   min-height: 34px;
   padding: 0 12px;
@@ -2163,7 +2244,7 @@ html[dir="rtl"] .cart-list {
 }
 
 .widget-mini-stat {
-  padding: 16px;
+  padding: 14px;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(243, 248, 254, 0.92), #ffffff);
   border: 1px solid #e3edf7;
@@ -2754,6 +2835,10 @@ html[dir="rtl"] .widget-header {
   direction: ltr;
 }
 
+html[dir="rtl"] .widget-header-menu button {
+  text-align: right;
+}
+
 html[dir="rtl"] .widget-powered {
   direction: rtl;
 }
@@ -2980,6 +3065,11 @@ html[dir="rtl"] .product-price-card strong {
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 152px);
   }
 
+  .support-widget.expanded {
+    width: auto;
+    height: auto;
+  }
+
   .support-teaser {
     inset-inline-end: 8px;
     bottom: 8px;
@@ -3001,6 +3091,16 @@ html[dir="rtl"] .product-price-card strong {
 
   .widget-header-badge {
     display: none;
+  }
+
+  .widget-toolbar-button span {
+    display: none;
+  }
+
+  .widget-toolbar-button {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
   }
 
   .product-detail-media {
@@ -3057,6 +3157,7 @@ html[dir="rtl"] .product-price-card strong {
 
   .widget-header {
     padding-inline: 14px;
+    border-radius: 22px 22px 0 0;
   }
 
   .widget-composer {
@@ -3078,6 +3179,10 @@ html[dir="rtl"] .product-price-card strong {
   .widget-home-section,
   .lead-capture-card {
     padding: 16px;
+  }
+
+  .widget-home-inline-prompts {
+    margin-top: 12px;
   }
 
   .store-header-inner {

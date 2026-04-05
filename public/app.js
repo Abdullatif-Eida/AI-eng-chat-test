@@ -24228,11 +24228,15 @@ function SupportWidget({
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
   const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
+  const homePromptOptions = customerProfile.submitted ? guidedPrompts.slice(0, 3) : guidedPrompts;
   const [showEmojiPicker, setShowEmojiPicker] = (0, import_react.useState)(false);
+  const [showHeaderMenu, setShowHeaderMenu] = (0, import_react.useState)(false);
+  const [expanded, setExpanded] = (0, import_react.useState)(false);
   const [leadName, setLeadName] = (0, import_react.useState)("");
   const [leadEmail, setLeadEmail] = (0, import_react.useState)("");
   const [leadNewsletter, setLeadNewsletter] = (0, import_react.useState)(false);
   const messageListRef = (0, import_react.useRef)(null);
+  const headerMenuRef = (0, import_react.useRef)(null);
   const emojiChoices = ["\u{1F642}", "\u{1F44D}", "\u{1F389}", "\u{1F64F}", "\u{1F499}", "\u{1F525}"];
   (0, import_react.useEffect)(() => {
     setLeadName(customerProfile.name ?? "");
@@ -24246,8 +24250,22 @@ function SupportWidget({
   (0, import_react.useEffect)(() => {
     if (!open) {
       setShowEmojiPicker(false);
+      setShowHeaderMenu(false);
+      setExpanded(false);
     }
   }, [open]);
+  (0, import_react.useEffect)(() => {
+    if (!showHeaderMenu) {
+      return void 0;
+    }
+    function handlePointerDown(event) {
+      if (!headerMenuRef.current?.contains(event.target)) {
+        setShowHeaderMenu(false);
+      }
+    }
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [showHeaderMenu]);
   (0, import_react.useEffect)(() => {
     if (!open || view !== "chat" || !messageListRef.current) {
       return;
@@ -24266,6 +24284,14 @@ function SupportWidget({
   }, [messages, loading, open, view]);
   function handlePromptSelection(prompt) {
     onPrimePrompt(prompt);
+  }
+  function handleGoHome() {
+    setShowHeaderMenu(false);
+    onSetView("home");
+  }
+  function handleResetConversation() {
+    setShowHeaderMenu(false);
+    onResetConversation();
   }
   const capabilityPills = locale === "ar" ? ["\u0627\u0642\u062A\u0631\u0627\u062D\u0627\u062A \u0634\u0631\u0627\u0621", "\u0631\u0628\u0637 \u0627\u0644\u0637\u0644\u0628\u0627\u062A", "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0648\u0633\u064A\u0627\u0633\u0627\u062A", "\u062A\u062D\u0648\u064A\u0644 \u0644\u0644\u0628\u0634\u0631"] : ["Buying advice", "Order tracking", "Returns & policies", "Human handoff"];
   const composerNotice = loading ? text.sendingLocked : cooldownRemainingMs > 0 ? fillTemplate(text.cooldownNotice, {
@@ -24377,7 +24403,7 @@ function SupportWidget({
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
     "aside",
     {
-      className: `support-widget ${open ? "open" : ""} ${view === "home" ? "view-home" : "view-chat"}`,
+      className: `support-widget ${open ? "open" : ""} ${expanded ? "expanded" : ""} ${view === "home" ? "view-home" : "view-chat"}`,
       "aria-label": "Support widget",
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header", children: [
@@ -24388,22 +24414,59 @@ function SupportWidget({
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Usually replies instantly", "\u064A\u0631\u062F \u063A\u0627\u0644\u0628\u0627\u064B \u0628\u0634\u0643\u0644 \u0641\u0648\u0631\u064A") })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header-end", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header-end", ref: headerMenuRef, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-header-badge", children: localizeText(locale, "Live support", "\u062F\u0639\u0645 \u0645\u0628\u0627\u0634\u0631") }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+              "button",
+              {
+                className: `widget-toolbar-button ${expanded ? "active" : ""}`,
+                type: "button",
+                onClick: () => setExpanded((current) => !current),
+                "aria-pressed": expanded,
+                "aria-label": expanded ? localizeText(locale, "Collapse widget", "\u062A\u0635\u063A\u064A\u0631 \u0627\u0644\u0646\u0627\u0641\u0630\u0629") : localizeText(locale, "Extend widget", "\u062A\u0648\u0633\u064A\u0639 \u0627\u0644\u0646\u0627\u0641\u0630\u0629"),
+                children: [
+                  expanded ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CollapseIcon, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ExpandIcon, {}),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: expanded ? localizeText(locale, "Shrink", "\u062A\u0635\u063A\u064A\u0631") : localizeText(locale, "Extend", "\u062A\u0648\u0633\u064A\u0639") })
+                ]
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+              "button",
+              {
+                className: `widget-toolbar-button ${showHeaderMenu ? "active" : ""}`,
+                type: "button",
+                onClick: () => setShowHeaderMenu((current) => !current),
+                "aria-expanded": showHeaderMenu,
+                "aria-label": localizeText(locale, "Open more actions", "\u0641\u062A\u062D \u0627\u0644\u0645\u0632\u064A\u062F \u0645\u0646 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"),
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MoreIcon, {}),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "More", "\u0627\u0644\u0645\u0632\u064A\u062F") })
+                ]
+              }
+            ),
+            showHeaderMenu ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-header-menu", role: "menu", "aria-label": localizeText(locale, "Widget actions", "\u0625\u062C\u0631\u0627\u0621\u0627\u062A \u0627\u0644\u0646\u0627\u0641\u0630\u0629"), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", onClick: handleGoHome, children: text.menuHome }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { type: "button", role: "menuitem", onClick: handleResetConversation, children: text.menuNewChat })
+            ] }) : null,
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "widget-icon widget-close", type: "button", onClick: onClose, "aria-label": "Close", children: "\xD7" })
           ] })
         ] }),
         view === "home" ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-home", children: [
           customerProfile.submitted ? leadCaptureSection : supportOverview,
           !customerProfile.submitted ? leadCaptureSection : null,
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-hero", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: `widget-home-hero ${customerProfile.submitted ? "compact" : ""}`, children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-home-eyebrow", children: localizeText(locale, "Storefront support", "\u062F\u0639\u0645 \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u062A\u062C\u0631") }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: customerProfile.submitted ? localizeText(locale, `Welcome back, ${customerProfile.name}`, `\u0645\u0631\u062D\u0628\u064B\u0627 \u0628\u0639\u0648\u062F\u062A\u0643 ${customerProfile.name}`) : text.homeHero }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: text.offlineNotice }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-capability-row", children: capabilityPills.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-capability-pill", children: item }, item)) })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: customerProfile.submitted ? localizeText(
+              locale,
+              "Jump back into chat, pick a quick topic, or start a fresh conversation from here.",
+              "\u0627\u0631\u062C\u0639 \u0644\u0644\u0645\u062D\u0627\u062F\u062B\u0629 \u0645\u0628\u0627\u0634\u0631\u0629\u060C \u0623\u0648 \u0627\u062E\u062A\u0631 \u0645\u0648\u0636\u0648\u0639\u064B\u0627 \u0633\u0631\u064A\u0639\u064B\u0627\u060C \u0623\u0648 \u0627\u0628\u062F\u0623 \u0645\u062D\u0627\u062F\u062B\u0629 \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0647\u0646\u0627."
+            ) : text.offlineNotice }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-capability-row", children: capabilityPills.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "widget-capability-pill", children: item }, item)) }),
+            customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "widget-home-inline-prompts", children: homePromptOptions.map((prompt) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "prompt-chip home", type: "button", onClick: () => handlePromptSelection(prompt), children: prompt }, prompt)) }) : null
           ] }),
-          customerProfile.submitted ? supportOverview : null,
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-section", children: [
+          customerProfile.submitted ? null : supportOverview,
+          !customerProfile.submitted ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { className: "widget-home-section", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-section-heading", children: [
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: localizeText(locale, "Start with a guided topic", "\u0627\u0628\u062F\u0623 \u0628\u0645\u0648\u0636\u0648\u0639 \u062C\u0627\u0647\u0632") }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "We\u2019ll open chat with the question ready for you.", "\u0633\u0646\u0641\u062A\u062D \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629 \u0645\u0639 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0633\u0624\u0627\u0644 \u0644\u0643.") })
@@ -24412,7 +24475,7 @@ function SupportWidget({
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", { children: prompt }),
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: localizeText(locale, "Open in chat", "\u0627\u0641\u062A\u062D \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u062F\u062B\u0629") })
             ] }, prompt)) })
-          ] }),
+          ] }) : null,
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "widget-powered", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "powered-label", children: text.poweredLabel }),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "powered-brand", children: text.poweredBrand })
@@ -24534,6 +24597,37 @@ function SendIcon() {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", children: [
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 12 20 4l-4.8 16-2.7-6.5L4 12Z" }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M12.5 13.5 20 4" })
+  ] });
+}
+function MoreIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "5", cy: "12", r: "1.5", fill: "currentColor", stroke: "none" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "12", cy: "12", r: "1.5", fill: "currentColor", stroke: "none" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", { cx: "19", cy: "12", r: "1.5", fill: "currentColor", stroke: "none" })
+  ] });
+}
+function ExpandIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M8 4H4v4" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M16 4h4v4" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M20 16v4h-4" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 16v4h4" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m9 9-5-5" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m15 9 5-5" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m15 15 5 5" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m9 15-5 5" })
+  ] });
+}
+function CollapseIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M10 4H4v6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M14 4h6v6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M20 14v6h-6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M4 14v6h6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m4 10 6-6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m20 10-6-6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m20 14-6 6" }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "m4 14 6 6" })
   ] });
 }
 function ArrowIcon({ direction }) {

@@ -2436,11 +2436,15 @@ function SupportWidget({
 }) {
   const prompts = locale === "ar" ? bootstrapData?.samplePromptsAr ?? [] : bootstrapData?.samplePrompts ?? [];
   const guidedPrompts = (text.quickActions ?? prompts).slice(0, 4);
+  const homePromptOptions = customerProfile.submitted ? guidedPrompts.slice(0, 3) : guidedPrompts;
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadNewsletter, setLeadNewsletter] = useState(false);
   const messageListRef = useRef(null);
+  const headerMenuRef = useRef(null);
   const emojiChoices = ["🙂", "👍", "🎉", "🙏", "💙", "🔥"];
 
   useEffect(() => {
@@ -2456,8 +2460,25 @@ function SupportWidget({
   useEffect(() => {
     if (!open) {
       setShowEmojiPicker(false);
+      setShowHeaderMenu(false);
+      setExpanded(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!showHeaderMenu) {
+      return undefined;
+    }
+
+    function handlePointerDown(event) {
+      if (!headerMenuRef.current?.contains(event.target)) {
+        setShowHeaderMenu(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [showHeaderMenu]);
 
   useEffect(() => {
     if (!open || view !== "chat" || !messageListRef.current) {
@@ -2481,6 +2502,16 @@ function SupportWidget({
 
   function handlePromptSelection(prompt) {
     onPrimePrompt(prompt);
+  }
+
+  function handleGoHome() {
+    setShowHeaderMenu(false);
+    onSetView("home");
+  }
+
+  function handleResetConversation() {
+    setShowHeaderMenu(false);
+    onResetConversation();
   }
 
   const capabilityPills = locale === "ar"
@@ -2610,7 +2641,7 @@ function SupportWidget({
 
   return (
     <aside
-      className={`support-widget ${open ? "open" : ""} ${
+      className={`support-widget ${open ? "open" : ""} ${expanded ? "expanded" : ""} ${
         view === "home" ? "view-home" : "view-chat"
       }`}
       aria-label="Support widget"
@@ -2623,8 +2654,38 @@ function SupportWidget({
             <span>{localizeText(locale, "Usually replies instantly", "يرد غالباً بشكل فوري")}</span>
           </div>
         </div>
-        <div className="widget-header-end">
+        <div className="widget-header-end" ref={headerMenuRef}>
           <span className="widget-header-badge">{localizeText(locale, "Live support", "دعم مباشر")}</span>
+          <button
+            className={`widget-toolbar-button ${expanded ? "active" : ""}`}
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            aria-pressed={expanded}
+            aria-label={expanded ? localizeText(locale, "Collapse widget", "تصغير النافذة") : localizeText(locale, "Extend widget", "توسيع النافذة")}
+          >
+            {expanded ? <CollapseIcon /> : <ExpandIcon />}
+            <span>{expanded ? localizeText(locale, "Shrink", "تصغير") : localizeText(locale, "Extend", "توسيع")}</span>
+          </button>
+          <button
+            className={`widget-toolbar-button ${showHeaderMenu ? "active" : ""}`}
+            type="button"
+            onClick={() => setShowHeaderMenu((current) => !current)}
+            aria-expanded={showHeaderMenu}
+            aria-label={localizeText(locale, "Open more actions", "فتح المزيد من الإجراءات")}
+          >
+            <MoreIcon />
+            <span>{localizeText(locale, "More", "المزيد")}</span>
+          </button>
+          {showHeaderMenu ? (
+            <div className="widget-header-menu" role="menu" aria-label={localizeText(locale, "Widget actions", "إجراءات النافذة")}>
+              <button type="button" role="menuitem" onClick={handleGoHome}>
+                {text.menuHome}
+              </button>
+              <button type="button" role="menuitem" onClick={handleResetConversation}>
+                {text.menuNewChat}
+              </button>
+            </div>
+          ) : null}
           <button className="widget-icon widget-close" type="button" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -2636,12 +2697,18 @@ function SupportWidget({
           {customerProfile.submitted ? leadCaptureSection : supportOverview}
           {!customerProfile.submitted ? leadCaptureSection : null}
 
-          <section className="widget-home-hero">
+          <section className={`widget-home-hero ${customerProfile.submitted ? "compact" : ""}`}>
             <span className="widget-home-eyebrow">{localizeText(locale, "Storefront support", "دعم داخل المتجر")}</span>
             <strong>{customerProfile.submitted
               ? localizeText(locale, `Welcome back, ${customerProfile.name}`, `مرحبًا بعودتك ${customerProfile.name}`)
               : text.homeHero}</strong>
-            <p>{text.offlineNotice}</p>
+            <p>{customerProfile.submitted
+              ? localizeText(
+                  locale,
+                  "Jump back into chat, pick a quick topic, or start a fresh conversation from here.",
+                  "ارجع للمحادثة مباشرة، أو اختر موضوعًا سريعًا، أو ابدأ محادثة جديدة من هنا."
+                )
+              : text.offlineNotice}</p>
             <div className="widget-capability-row">
               {capabilityPills.map((item) => (
                 <span key={item} className="widget-capability-pill">
@@ -2649,11 +2716,21 @@ function SupportWidget({
                 </span>
               ))}
             </div>
+            {customerProfile.submitted ? (
+              <div className="widget-home-inline-prompts">
+                {homePromptOptions.map((prompt) => (
+                  <button key={prompt} className="prompt-chip home" type="button" onClick={() => handlePromptSelection(prompt)}>
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </section>
 
-          {customerProfile.submitted ? supportOverview : null}
+          {customerProfile.submitted ? null : supportOverview}
 
-          <section className="widget-home-section">
+          {!customerProfile.submitted ? (
+            <section className="widget-home-section">
             <div className="widget-section-heading">
               <strong>{localizeText(locale, "Start with a guided topic", "ابدأ بموضوع جاهز")}</strong>
               <span>{localizeText(locale, "We’ll open chat with the question ready for you.", "سنفتح المحادثة مع تجهيز السؤال لك.")}</span>
@@ -2666,7 +2743,8 @@ function SupportWidget({
                 </button>
               ))}
             </div>
-          </section>
+            </section>
+          ) : null}
 
           <div className="widget-powered">
             <span className="powered-label">{text.poweredLabel}</span>
@@ -2831,6 +2909,46 @@ function SendIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 12 20 4l-4.8 16-2.7-6.5L4 12Z" />
       <path d="M12.5 13.5 20 4" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 4H4v4" />
+      <path d="M16 4h4v4" />
+      <path d="M20 16v4h-4" />
+      <path d="M4 16v4h4" />
+      <path d="m9 9-5-5" />
+      <path d="m15 9 5-5" />
+      <path d="m15 15 5 5" />
+      <path d="m9 15-5 5" />
+    </svg>
+  );
+}
+
+function CollapseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M10 4H4v6" />
+      <path d="M14 4h6v6" />
+      <path d="M20 14v6h-6" />
+      <path d="M4 14v6h6" />
+      <path d="m4 10 6-6" />
+      <path d="m20 10-6-6" />
+      <path d="m20 14-6 6" />
+      <path d="m4 14 6 6" />
     </svg>
   );
 }
