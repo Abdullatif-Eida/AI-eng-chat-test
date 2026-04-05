@@ -336,7 +336,7 @@ export function normalizeStructuredReply({
     }
   };
 }
-
+// For testing and tools that want to infer intent without a full structured reply
 export function inferIntentFromTools(toolTrace = []) {
   return inferIntentFromToolTrace(toolTrace);
 }
